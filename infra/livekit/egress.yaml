@@ -1,0 +1,16 @@
+# LiveKit Egress worker. Room-composite recording uses headless Chrome
+# (~4 CPU per concurrent job). Keep this on a second node past ~2 recordings.
+api_key: visitmeet
+api_secret: "visitmeet_dev_secret_change_me_32b"
+ws_url: ws://127.0.0.1:7880
+redis:
+  address: 127.0.0.1:6379
+insecure: true
+enable_chrome_sandbox: false
+log_level: info
+cpu_cost:
+  room_composite_cpu_cost: 4.0
+  track_composite_cpu_cost: 1.0
+  track_cpu_cost: 0.5
+file_output:
+  local: true

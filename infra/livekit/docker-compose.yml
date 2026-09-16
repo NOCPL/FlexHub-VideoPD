@@ -1,0 +1,42 @@
+# Local LiveKit stack. On EC2 use host networking and the files in ../ec2.
+# Start: docker compose -f infra/livekit/docker-compose.yml up -d
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+  livekit:
+    image: livekit/livekit-server:v1.9.1
+    restart: unless-stopped
+    depends_on:
+      - redis
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50200:50000-50200/udp"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  egress:
+    image: livekit/egress:v1.9.1
+    restart: unless-stopped
+    depends_on:
+      - livekit
+      - redis
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
+      - ../../data/recordings:/out
+    cap_add:
+      - SYS_ADMIN
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles:
+      - recording

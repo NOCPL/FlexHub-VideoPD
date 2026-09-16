@@ -1,0 +1,28 @@
+# Local / single-node LiveKit SFU config.
+# For EC2, set use_external_ip: true and point webhook URLs at the public API.
+port: 7880
+bind_addresses:
+  - ""
+log_level: info
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50200
+  use_external_ip: false
+
+redis:
+  address: 127.0.0.1:6379
+
+keys:
+  visitmeet: "visitmeet_dev_secret_change_me_32b"
+
+room:
+  auto_create: true
+  empty_timeout: 300
+  departure_timeout: 20
+
+webhook:
+  api_key: visitmeet
+  urls:
+    - http://127.0.0.1:5088/api/webhooks/livekit
