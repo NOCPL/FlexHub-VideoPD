@@ -55,7 +55,7 @@ export function SnapshotCropDialog({ meetingId, imageSrc, onClose, onSaved }: Pr
           <DialogTitle>Crop evidence still</DialogTitle>
           <DialogDescription>
             Frame the member or document from the live video. The cropped image is stored against this
-            visit&apos;s bank, group, and member IDs.
+            Video PD&apos;s bank, branch, group, and member IDs.
           </DialogDescription>
         </DialogHeader>
         <div className="relative h-80 overflow-hidden rounded-lg bg-black">

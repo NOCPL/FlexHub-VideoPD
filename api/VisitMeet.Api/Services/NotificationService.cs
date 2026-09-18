@@ -17,6 +17,7 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             meeting.Code,
             "Field officer joined. Recording segment started.",
             meeting.Bank,
+            meeting.Branch,
             meeting.GroupId,
             meeting.MemberId));
 
@@ -25,8 +26,9 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             "MeetingEnded",
             meeting.Id,
             meeting.Code,
-            $"Visit ended. Duration {meeting.DurationSeconds ?? 0}s.",
+            $"Video PD ended. Duration {meeting.DurationSeconds ?? 0}s.",
             meeting.Bank,
+            meeting.Branch,
             meeting.GroupId,
             meeting.MemberId));
 
@@ -37,6 +39,7 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             meeting.Code,
             "A recording segment is ready for this visit.",
             meeting.Bank,
+            meeting.Branch,
             meeting.GroupId,
             meeting.MemberId));
 
@@ -48,6 +51,7 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             slug,
             $"{waiting.DisplayName} is waiting to be admitted.",
             waiting.Bank,
+            waiting.Branch,
             waiting.GroupId,
             waiting.MemberId);
         return Task.WhenAll(
@@ -56,15 +60,35 @@ public class NotificationService(IHubContext<NotificationHub> hub)
     }
 
     public Task WaitingLeftAsync(string slug, Guid waitingId) =>
-        hub.Clients.Group($"host:{slug}").SendAsync("waitingLeft", waitingId);
-
-    public Task LobbyChatAsync(string slug, Guid waitingId, ChatMessageDto message) =>
         Task.WhenAll(
-            hub.Clients.Group($"host:{slug}").SendAsync("lobbyChat", waitingId, message),
-            hub.Clients.Group($"waiting:{waitingId}").SendAsync("lobbyChat", waitingId, message));
+            hub.Clients.Group($"host:{slug}").SendAsync("waitingLeft", waitingId),
+            hub.Clients.Group($"lobby:{slug}").SendAsync("waitingLeft", waitingId));
+
+    public Task WaitingDeniedAsync(string slug, Guid waitingId) =>
+        Task.WhenAll(
+            hub.Clients.Group($"host:{slug}").SendAsync("waitingLeft", waitingId),
+            hub.Clients.Group($"waiting:{waitingId}").SendAsync("denied"));
+
+    public Task LobbyChatAsync(string slug, Guid? recipientWaitingId, LobbyMessageDto message)
+    {
+        var sends = new List<Task>
+        {
+            hub.Clients.Group($"host:{slug}").SendAsync("lobbyChat", message)
+        };
+        sends.Add(recipientWaitingId is Guid recipient
+            ? hub.Clients.Group($"waiting:{recipient}").SendAsync("lobbyChat", message)
+            : hub.Clients.Group($"lobby:{slug}").SendAsync("lobbyChat", message));
+        return Task.WhenAll(sends);
+    }
 
     public Task AdmittedAsync(string slug, Guid waitingId, JoinTokenResponse field, JoinTokenResponse host) =>
         Task.WhenAll(
             hub.Clients.Group($"waiting:{waitingId}").SendAsync("admitted", field),
             hub.Clients.Group($"host:{slug}").SendAsync("admitted", waitingId, host));
+
+    public Task ActiveOfficerEndedAsync(string slug, Guid waitingId, int durationSeconds) =>
+        hub.Clients.Group($"host:{slug}").SendAsync("activeEnded", waitingId, durationSeconds);
+
+    public Task ActiveOfficerConnectedAsync(string slug, Guid waitingId, DateTimeOffset connectedAt) =>
+        hub.Clients.Group($"host:{slug}").SendAsync("activeConnected", waitingId, connectedAt);
 }

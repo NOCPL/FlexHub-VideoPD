@@ -18,6 +18,7 @@ export type MeetingListItem = {
   id: string;
   code: string;
   bank: string;
+  branch: string;
   groupId: string;
   memberId: string;
   memberName: string;
@@ -38,6 +39,7 @@ export type Recording = {
   status: string;
   sequence: number;
   bank: string;
+  branch: string;
   groupId: string;
   memberId: string;
   filePath: string | null;
@@ -51,6 +53,7 @@ export type Recording = {
 export type Snapshot = {
   id: string;
   bank: string;
+  branch: string;
   groupId: string;
   memberId: string;
   url: string;
@@ -74,6 +77,7 @@ export type MeetingDetail = {
   id: string;
   code: string;
   bank: string;
+  branch: string;
   groupId: string;
   memberId: string;
   memberName: string;
@@ -103,12 +107,30 @@ export type WaitingOfficer = {
   id: string;
   displayName: string;
   bank: string;
+  branch: string;
   groupId: string;
   memberId: string;
   status: string;
   createdAt: string;
   admittedAt: string | null;
-  chat: ChatMessage[];
+  connectedAt: string | null;
+  leftAt: string | null;
+  callDurationSeconds: number | null;
+};
+
+export type LobbyMessage = {
+  id: string;
+  senderUserId: string;
+  senderName: string;
+  senderRole: string;
+  recipientWaitingOfficerId: string | null;
+  body: string;
+  sentAt: string;
+};
+
+export type WaitingRoom = {
+  waiting: WaitingOfficer;
+  chat: LobbyMessage[];
 };
 
 export type WaitResponse = {
@@ -122,6 +144,8 @@ export type HostLobby = {
   officer: User;
   meeting: MeetingDetail | null;
   waiting: WaitingOfficer[];
+  active: WaitingOfficer | null;
+  chat: LobbyMessage[];
 };
 
 export type AdmitResponse = {
@@ -136,6 +160,7 @@ export type NotificationPayload = {
   code: string;
   message: string;
   bank?: string | null;
+  branch?: string | null;
   groupId?: string | null;
   memberId?: string | null;
 };

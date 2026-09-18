@@ -30,6 +30,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.Code).IsUnique();
             e.Property(x => x.Code).HasMaxLength(12);
             e.Property(x => x.Bank).HasMaxLength(64);
+            e.Property(x => x.Branch).HasMaxLength(100);
             e.Property(x => x.GroupId).HasMaxLength(64);
             e.Property(x => x.MemberId).HasMaxLength(64);
             e.Property(x => x.Status).HasMaxLength(40);
@@ -47,15 +48,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.HostSlug).HasMaxLength(32);
             e.Property(x => x.DisplayName).HasMaxLength(200);
             e.Property(x => x.Bank).HasMaxLength(64);
+            e.Property(x => x.Branch).HasMaxLength(100);
             e.Property(x => x.GroupId).HasMaxLength(64);
             e.Property(x => x.MemberId).HasMaxLength(64);
             e.Property(x => x.Status).HasMaxLength(40);
             e.HasOne(x => x.CreditOfficer).WithMany().HasForeignKey(x => x.CreditOfficerId).OnDelete(DeleteBehavior.Restrict);
-            e.HasMany(x => x.Messages).WithOne(x => x.WaitingOfficer).HasForeignKey(x => x.WaitingOfficerId);
+            e.HasMany(x => x.Messages).WithOne(x => x.RecipientWaitingOfficer)
+                .HasForeignKey(x => x.RecipientWaitingOfficerId);
         });
 
         modelBuilder.Entity<LobbyMessage>(e =>
         {
+            e.HasIndex(x => new { x.HostSlug, x.SentAt });
+            e.Property(x => x.HostSlug).HasMaxLength(32);
             e.Property(x => x.Body).HasMaxLength(2000);
         });
     }

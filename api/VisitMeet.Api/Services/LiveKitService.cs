@@ -18,6 +18,7 @@ public class LiveKitService(IConfiguration config, ILogger<LiveKitService> logge
         {
             ["role"] = role,
             ["bank"] = meeting.Bank,
+            ["branch"] = meeting.Branch,
             ["groupId"] = meeting.GroupId,
             ["memberId"] = meeting.MemberId
         };
@@ -34,7 +35,7 @@ public class LiveKitService(IConfiguration config, ILogger<LiveKitService> logge
             .WithName(displayName)
             .WithTtl(TimeSpan.FromHours(4))
             .WithAttributes(attributes)
-            .WithMetadata($"{{\"role\":\"{role}\",\"bank\":\"{meeting.Bank}\",\"groupId\":\"{meeting.GroupId}\",\"memberId\":\"{meeting.MemberId}\"}}")
+            .WithMetadata($"{{\"role\":\"{role}\",\"bank\":\"{meeting.Bank}\",\"branch\":\"{meeting.Branch}\",\"groupId\":\"{meeting.GroupId}\",\"memberId\":\"{meeting.MemberId}\"}}")
             .WithGrants(new VideoGrants
             {
                 RoomJoin = true,
@@ -49,13 +50,13 @@ public class LiveKitService(IConfiguration config, ILogger<LiveKitService> logge
     }
 
     public string RecordingRelativePath(Meeting meeting, int sequence) =>
-        $"recordings/{Safe(meeting.Bank)}/{Safe(meeting.GroupId)}/{Safe(meeting.MemberId)}/{meeting.Id:N}/seg-{sequence}.mp4";
+        $"recordings/{Safe(meeting.Bank)}/{Safe(meeting.Branch)}/{Safe(meeting.GroupId)}/{Safe(meeting.MemberId)}/{meeting.Id:N}/seg-{sequence}.mp4";
 
     public async Task<(string? EgressId, string? Error)> StartRoomRecordingAsync(Meeting meeting, int sequence)
     {
         var httpUrl = config["LiveKit:HttpUrl"] ?? "http://127.0.0.1:7880";
         var recordingsPath = config["Storage:RecordingsPath"] ?? "/workspace/data/recordings";
-        var relative = $"{Safe(meeting.Bank)}/{Safe(meeting.GroupId)}/{Safe(meeting.MemberId)}/{meeting.Id:N}/seg-{sequence}.mp4";
+        var relative = $"{Safe(meeting.Bank)}/{Safe(meeting.Branch)}/{Safe(meeting.GroupId)}/{Safe(meeting.MemberId)}/{meeting.Id:N}/seg-{sequence}.mp4";
         var filepath = Path.Combine(recordingsPath, relative).Replace('\\', '/');
         Directory.CreateDirectory(Path.GetDirectoryName(filepath)!);
 

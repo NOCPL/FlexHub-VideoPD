@@ -1,0 +1,14 @@
+[Unit]
+Description=Flexhub Video PD API
+After=network.target livekit-docker.service
+
+[Service]
+WorkingDirectory=/opt/videopd/api
+EnvironmentFile=/opt/videopd/.env
+ExecStart=/usr/bin/dotnet /opt/videopd/api/VisitMeet.Api.dll
+Restart=always
+RestartSec=3
+User=www-data
+
+[Install]
+WantedBy=multi-user.target

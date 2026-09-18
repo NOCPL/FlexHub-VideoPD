@@ -13,16 +13,19 @@ namespace VisitMeet.Api.Controllers;
 public class WaitingController(LobbyService lobby) : ControllerBase
 {
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<WaitingOfficerDto>> Get(Guid id)
+    public async Task<ActionResult<WaitingRoomDto>> Get(Guid id)
     {
         var waiting = await lobby.LoadWaitingAsync(id);
         if (waiting is null) return NotFound();
         if (!CanAccess(waiting)) return Forbid();
-        return lobby.ToDto(waiting, true);
+        var isHost = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.CreditOfficer);
+        return new WaitingRoomDto(
+            lobby.ToDto(waiting),
+            await lobby.GetChatAsync(waiting, isHost));
     }
 
     [HttpPost("{id:guid}/chat")]
-    public async Task<ActionResult<ChatMessageDto>> Chat(Guid id, ChatPostRequest request)
+    public async Task<ActionResult<LobbyMessageDto>> Chat(Guid id, LobbyChatRequest request)
     {
         var waiting = await lobby.LoadWaitingAsync(id);
         if (waiting is null) return NotFound();
@@ -31,7 +34,34 @@ public class WaitingController(LobbyService lobby) : ControllerBase
         {
             var name = User.Identity?.Name ?? "Officer";
             var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? Roles.FieldGuest;
-            return await lobby.PostChatAsync(waiting, User.GetUserId(), name, role, request.Body);
+            return await lobby.PostChatAsync(
+                waiting,
+                User.GetUserId(),
+                name,
+                role,
+                request.Body,
+                request.RecipientWaitingOfficerId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/deny")]
+    public async Task<IActionResult> Deny(Guid id)
+    {
+        var waiting = await lobby.LoadWaitingAsync(id);
+        if (waiting is null) return NotFound();
+        if (!User.IsInRole(Roles.Admin) &&
+            (!User.IsInRole(Roles.CreditOfficer) || waiting.CreditOfficerId != User.GetUserId()))
+        {
+            return Forbid();
+        }
+        try
+        {
+            await lobby.DenyAsync(waiting);
+            return NoContent();
         }
         catch (InvalidOperationException ex)
         {

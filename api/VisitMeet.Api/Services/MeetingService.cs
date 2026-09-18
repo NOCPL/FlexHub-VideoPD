@@ -12,10 +12,10 @@ public class MeetingMapper(IConfiguration config)
     public string HostUrl(string? slug) =>
         string.IsNullOrEmpty(slug) ? "" : $"{PublicWebUrl}/host/{slug}";
 
-    public string FieldUrl(string? slug, string bank, string groupId, string memberId)
+    public string FieldUrl(string? slug, string bank, string branch, string groupId, string memberId)
     {
         if (string.IsNullOrEmpty(slug)) return "";
-        return $"{PublicWebUrl}/join/{slug}?bank={Uri.EscapeDataString(bank)}&groupId={Uri.EscapeDataString(groupId)}&memberId={Uri.EscapeDataString(memberId)}";
+        return $"{PublicWebUrl}/join/{slug}?bank={Uri.EscapeDataString(bank)}&branch={Uri.EscapeDataString(branch)}&groupId={Uri.EscapeDataString(groupId)}&memberId={Uri.EscapeDataString(memberId)}";
     }
 
     public UserDto ToUser(User user) =>
@@ -28,6 +28,7 @@ public class MeetingMapper(IConfiguration config)
             m.Id,
             m.Code,
             m.Bank,
+            m.Branch,
             m.GroupId,
             m.MemberId,
             m.MemberName,
@@ -37,7 +38,7 @@ public class MeetingMapper(IConfiguration config)
             m.CreditOfficerId,
             slug,
             HostUrl(slug),
-            FieldUrl(slug, m.Bank, m.GroupId, m.MemberId),
+            FieldUrl(slug, m.Bank, m.Branch, m.GroupId, m.MemberId),
             m.DurationSeconds,
             m.Recordings.OrderByDescending(r => r.CreatedAt).FirstOrDefault()?.Status,
             m.Recordings.Count);
@@ -50,6 +51,7 @@ public class MeetingMapper(IConfiguration config)
             m.Id,
             m.Code,
             m.Bank,
+            m.Branch,
             m.GroupId,
             m.MemberId,
             m.MemberName,
@@ -60,13 +62,13 @@ public class MeetingMapper(IConfiguration config)
             m.EndedAt,
             m.DurationSeconds,
             HostUrl(slug),
-            FieldUrl(slug, m.Bank, m.GroupId, m.MemberId),
+            FieldUrl(slug, m.Bank, m.Branch, m.GroupId, m.MemberId),
             ToUser(m.CreditOfficer!),
             m.Recordings.OrderBy(r => r.Sequence).Select(r => new RecordingDto(
-                r.Id, r.Status, r.Sequence, r.Bank, r.GroupId, r.MemberId,
+                r.Id, r.Status, r.Sequence, r.Bank, r.Branch, r.GroupId, r.MemberId,
                 r.FilePath, r.DurationSeconds, r.Error, r.CreatedAt, r.JoinedAt, r.LeftAt)).ToList(),
             m.Snapshots.OrderByDescending(s => s.CreatedAt).Select(s => new SnapshotDto(
-                s.Id, s.Bank, s.GroupId, s.MemberId,
+                s.Id, s.Bank, s.Branch, s.GroupId, s.MemberId,
                 $"/api/meetings/{m.Id}/snapshots/{s.Id}/file",
                 s.CropX, s.CropY, s.CropWidth, s.CropHeight, s.CreatedAt)).ToList(),
             m.ChatMessages.OrderBy(c => c.SentAt).Select(c => new ChatMessageDto(
@@ -147,6 +149,7 @@ public class MeetingService(
             Id = id,
             Code = code,
             Bank = "",
+            Branch = "",
             GroupId = "",
             MemberId = "",
             MemberName = officer.Name,
@@ -191,6 +194,7 @@ public class MeetingService(
             Id = id,
             Code = code,
             Bank = (request.Bank ?? "").Trim(),
+            Branch = (request.Branch ?? "").Trim(),
             GroupId = (request.GroupId ?? "").Trim(),
             MemberId = (request.MemberId ?? "").Trim(),
             MemberName = string.IsNullOrWhiteSpace(request.MemberName)
@@ -207,9 +211,15 @@ public class MeetingService(
         return await LoadAsync(meeting.Id);
     }
 
-    public async Task StampJoinParamsAsync(Meeting meeting, string? bank, string? groupId, string? memberId)
+    public async Task StampJoinParamsAsync(
+        Meeting meeting,
+        string? bank,
+        string? branch,
+        string? groupId,
+        string? memberId)
     {
         meeting.Bank = (bank ?? "").Trim();
+        meeting.Branch = (branch ?? "").Trim();
         meeting.GroupId = (groupId ?? "").Trim();
         meeting.MemberId = (memberId ?? "").Trim();
         await db.SaveChangesAsync();
@@ -224,7 +234,7 @@ public class MeetingService(
         }
     }
 
-    public async Task OnFieldOfficerJoinedAsync(Meeting meeting)
+    public async Task OnFieldOfficerJoinedAsync(Meeting meeting, string? identity = null)
     {
         if (meeting.Status is MeetingStatuses.Completed or MeetingStatuses.Cancelled)
         {
@@ -232,12 +242,25 @@ public class MeetingService(
         }
 
         meeting.FieldOfficerCount += 1;
+        var activeOfficer = await FindWaitingOfficerByIdentityAsync(meeting, identity);
+        if (activeOfficer is not null && activeOfficer.Status == WaitingStatuses.Admitted)
+        {
+            activeOfficer.Status = WaitingStatuses.Connected;
+            activeOfficer.ConnectedAt ??= DateTimeOffset.UtcNow;
+        }
         if (meeting.Status != MeetingStatuses.InProgress)
         {
             meeting.Status = MeetingStatuses.InProgress;
             meeting.StartedAt ??= DateTimeOffset.UtcNow;
         }
         await db.SaveChangesAsync();
+        if (activeOfficer?.ConnectedAt is DateTimeOffset connectedAt)
+        {
+            await notifications.ActiveOfficerConnectedAsync(
+                activeOfficer.HostSlug,
+                activeOfficer.Id,
+                connectedAt);
+        }
 
         if (meeting.FieldOfficerCount != 1)
         {
@@ -260,6 +283,7 @@ public class MeetingService(
             EgressId = egressId,
             Status = egressId is null ? RecordingStatuses.Unavailable : RecordingStatuses.Active,
             Bank = meeting.Bank,
+            Branch = meeting.Branch,
             GroupId = meeting.GroupId,
             MemberId = meeting.MemberId,
             Sequence = sequence,
@@ -282,7 +306,7 @@ public class MeetingService(
         }
 
         foreach (var recording in meeting.Recordings.Where(r =>
-                     r.Status is RecordingStatuses.Active or RecordingStatuses.Starting or RecordingStatuses.Unavailable
+                     (r.Status is RecordingStatuses.Active or RecordingStatuses.Starting or RecordingStatuses.Unavailable)
                      && r.LeftAt == null).ToList())
         {
             if (recording.EgressId != null)
@@ -300,6 +324,36 @@ public class MeetingService(
             }
         }
         await db.SaveChangesAsync();
+    }
+
+    private async Task<WaitingOfficer?> FindWaitingOfficerByIdentityAsync(Meeting meeting, string? identity)
+    {
+        if (identity?.StartsWith("fo-", StringComparison.Ordinal) == true &&
+            Guid.TryParseExact(identity[3..], "N", out var waitingId))
+        {
+            return await db.WaitingOfficers.FirstOrDefaultAsync(w =>
+                w.Id == waitingId && w.MeetingId == meeting.Id);
+        }
+        return await db.WaitingOfficers.FirstOrDefaultAsync(w =>
+            w.MeetingId == meeting.Id &&
+            (w.Status == WaitingStatuses.Admitted || w.Status == WaitingStatuses.Connected));
+    }
+
+    private async Task EndWaitingOfficerAsync(Meeting meeting, string? identity)
+    {
+        var waiting = await FindWaitingOfficerByIdentityAsync(meeting, identity);
+        if (waiting is null) return;
+        waiting.Status = WaitingStatuses.Left;
+        waiting.LeftAt = DateTimeOffset.UtcNow;
+        var started = waiting.ConnectedAt ?? waiting.AdmittedAt;
+        waiting.CallDurationSeconds = started is null
+            ? 0
+            : (int)Math.Max(0, (waiting.LeftAt.Value - started.Value).TotalSeconds);
+        await db.SaveChangesAsync();
+        await notifications.ActiveOfficerEndedAsync(
+            waiting.HostSlug,
+            waiting.Id,
+            waiting.CallDurationSeconds.Value);
     }
 
     public async Task CompleteAsync(Meeting meeting)
@@ -326,7 +380,27 @@ public class MeetingService(
         meeting.DurationSeconds = (int)Math.Max(0, (meeting.EndedAt.Value - meeting.StartedAt.Value).TotalSeconds);
         meeting.Status = MeetingStatuses.Completed;
         meeting.FieldOfficerCount = 0;
+        var activeOfficers = await db.WaitingOfficers.Where(w =>
+                w.MeetingId == meeting.Id &&
+                (w.Status == WaitingStatuses.Admitted || w.Status == WaitingStatuses.Connected))
+            .ToListAsync();
+        foreach (var waiting in activeOfficers)
+        {
+            waiting.Status = WaitingStatuses.Left;
+            waiting.LeftAt = DateTimeOffset.UtcNow;
+            var started = waiting.ConnectedAt ?? waiting.AdmittedAt;
+            waiting.CallDurationSeconds = started is null
+                ? 0
+                : (int)Math.Max(0, (waiting.LeftAt.Value - started.Value).TotalSeconds);
+        }
         await db.SaveChangesAsync();
+        foreach (var waiting in activeOfficers)
+        {
+            await notifications.ActiveOfficerEndedAsync(
+                waiting.HostSlug,
+                waiting.Id,
+                waiting.CallDurationSeconds ?? 0);
+        }
         await notifications.MeetingEndedAsync(meeting);
     }
 
@@ -350,13 +424,14 @@ public class MeetingService(
             case "participant_joined":
                 if (identity?.StartsWith("fo-", StringComparison.Ordinal) == true)
                 {
-                    await OnFieldOfficerJoinedAsync(meeting);
+                    await OnFieldOfficerJoinedAsync(meeting, identity);
                 }
                 break;
             case "participant_left":
                 if (identity?.StartsWith("fo-", StringComparison.Ordinal) == true)
                 {
                     await OnFieldOfficerLeftAsync(meeting);
+                    await EndWaitingOfficerAsync(meeting, identity);
                 }
                 break;
             case "egress_ended":
@@ -408,6 +483,7 @@ public class MeetingService(
             Id = snapshotId,
             MeetingId = meeting.Id,
             Bank = meeting.Bank,
+            Branch = meeting.Branch,
             GroupId = meeting.GroupId,
             MemberId = meeting.MemberId,
             FileName = fileName,

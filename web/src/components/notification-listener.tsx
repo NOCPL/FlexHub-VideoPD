@@ -32,7 +32,7 @@ export function NotificationListener() {
       toast(payload.message, {
         description:
           payload.bank || payload.groupId
-            ? `${payload.bank ?? ""} · ${payload.groupId ?? ""} · ${payload.memberId ?? ""}`
+            ? `${payload.bank ?? ""} · ${payload.branch ?? ""} · ${payload.groupId ?? ""} · ${payload.memberId ?? ""}`
             : payload.type,
         action: {
           label: payload.type === "WaitingArrived" ? "Open lobby" : "Open",
@@ -46,17 +46,19 @@ export function NotificationListener() {
       });
     });
 
-    connection
-      .start()
-      .catch((err: Error) => {
+    const connect = window.setTimeout(() => {
+      if (cancelled) return;
+      connection.start().catch((err: Error) => {
         if (cancelled) return;
         const message = err?.message ?? "";
         if (message.includes("stopped during negotiation")) return;
         toast.error("Live notifications unavailable. Refresh if the dashboard looks stale.");
       });
+    }, 50);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(connect);
       void connection.stop();
     };
   }, [user]);

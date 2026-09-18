@@ -1,0 +1,14 @@
+[Unit]
+Description=Flexhub Video PD web (Next.js)
+After=network.target visitmeet-api.service
+
+[Service]
+WorkingDirectory=/opt/videopd/web
+EnvironmentFile=/opt/videopd/.env
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 43123
+Restart=always
+RestartSec=3
+User=www-data
+
+[Install]
+WantedBy=multi-user.target

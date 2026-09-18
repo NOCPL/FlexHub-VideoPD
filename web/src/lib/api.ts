@@ -4,12 +4,14 @@ import type {
   ChatMessage,
   HostLobby,
   JoinTokenResponse,
+  LobbyMessage,
   MeetingDetail,
   MeetingListItem,
   Snapshot,
   User,
   WaitResponse,
   WaitingOfficer,
+  WaitingRoom,
 } from "@/lib/types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -89,6 +91,7 @@ export const api = {
   meeting: (id: string) => request<MeetingDetail>(`/api/meetings/${id}`),
   schedule: (body: {
     bank: string;
+    branch: string;
     groupId: string;
     memberId: string;
     memberName: string;
@@ -110,6 +113,7 @@ export const api = {
   join: (body: {
     slug: string;
     bank: string;
+    branch: string;
     groupId: string;
     memberId: string;
     displayName?: string;
@@ -119,16 +123,23 @@ export const api = {
       { method: "POST", body: JSON.stringify(body) },
       true,
     ),
-  waiting: (id: string) => request<WaitingOfficer>(`/api/waiting/${id}`),
-  waitingChat: (id: string, body: string) =>
-    request<ChatMessage>(`/api/waiting/${id}/chat`, {
+  waiting: (id: string) => request<WaitingRoom>(`/api/waiting/${id}`),
+  waitingChat: (id: string, body: string, recipientWaitingOfficerId: string | null) =>
+    request<LobbyMessage>(`/api/waiting/${id}/chat`, {
       method: "POST",
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, recipientWaitingOfficerId }),
     }),
   waitingLeave: (id: string) =>
     request<void>(`/api/waiting/${id}/leave`, { method: "POST" }),
   waitingConnect: (id: string) =>
     request<JoinTokenResponse>(`/api/waiting/${id}/connect`, { method: "POST" }),
+  denyWaiting: (id: string) =>
+    request<void>(`/api/waiting/${id}/deny`, { method: "POST" }),
+  createCreditOfficer: (body: { name: string; email: string; temporaryPassword: string }) =>
+    request<User>("/api/users/credit-officers", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   endMeeting: (id: string) =>
     request<MeetingDetail>(`/api/meetings/${id}/end`, { method: "POST" }),
   postChat: (id: string, body: string) =>

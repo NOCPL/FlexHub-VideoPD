@@ -12,7 +12,7 @@ import { ApiError } from "@/lib/api";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-muted-foreground">Loading…</div>}>
+    <Suspense fallback={<div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading…</div>}>
       <LoginForm />
     </Suspense>
   );
@@ -47,23 +47,27 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center bg-[radial-gradient(1200px_circle_at_10%_0%,#d7efe6,transparent_45%),linear-gradient(#f6f1e8,#eef3ef)] px-4 py-10">
+    <div className="flex min-h-full flex-1 items-center justify-center bg-[#eef1f6] px-4 py-10">
       <div className="grid w-full max-w-4xl gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-center">
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-emerald-900/80">
-            <Video className="size-4" />
+          <div className="flex items-center gap-2 text-sm font-medium text-[#29416f]">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-[#f7481c] text-white">
+              <Video className="size-4" />
+            </span>
             Links for Angular and Kotlin
           </div>
-          <h1 className="text-4xl font-semibold tracking-tight text-emerald-950">Flexhub Video PD</h1>
-          <p className="max-w-md text-emerald-950/70">
-            Credit officers sign in to schedule a visit. That mints a static host URL for Angular and an
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-[#10264e]">Flexhub Video PD</h1>
+          <p className="max-w-md text-[#5a6a84]">
+            Credit officers sign in to schedule Video PD. That mints a static host URL for Angular and an
             open field-officer URL for Kotlin with bank, group, and member query parameters.
           </p>
         </div>
-        <Card>
+        <Card className="border border-[#d7deea] bg-white shadow-sm">
           <CardHeader>
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Schedule meetings or open your static host room.</CardDescription>
+            <CardTitle className="text-[#10264e]">Sign in</CardTitle>
+            <CardDescription className="text-[#5a6a84]">
+              Schedule meetings or open your static host room.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-3" onSubmit={onSubmit}>
@@ -82,7 +86,7 @@ function LoginForm() {
                 />
               </div>
               {error ? <p className="text-destructive text-sm">{error}</p> : null}
-              <Button type="submit" className="w-full" disabled={busy}>
+              <Button type="submit" className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy}>
                 {busy ? "Signing in…" : "Continue"}
               </Button>
             </form>

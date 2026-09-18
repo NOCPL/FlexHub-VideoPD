@@ -11,17 +11,17 @@ Each credit officer gets a **permanent host slug** at user creation (unguessable
 | Who | URL |
 | --- | --- |
 | Credit officer (static) | `https://meet.example.com/host/{hostSlug}` |
-| Field officer (open, no login) | `https://meet.example.com/join/{hostSlug}?bank=SBI&groupId=G-22&memberId=M-10482` |
+| Field officer (open, no login) | `https://meet.example.com/join/{hostSlug}?bank=SBI&branch=Mumbai-Central&groupId=G-22&memberId=M-10482` |
 
-`POST /api/meetings` (credit officer or admin) creates/updates the visit that `{hostSlug}` currently points at and returns `hostUrl` plus `fieldUrl` with `bank`, `groupId`, and `memberId`. Flexhub Video PD **does not validate** those query values against the scheduled visit. They are stored as-is so recordings, duration, chat, and stills can be identified later. Kotlin and Angular are responsible for putting the right values on the link.
+`POST /api/meetings` (credit officer or admin) creates/updates the Video PD that `{hostSlug}` currently points at and returns `hostUrl` plus `fieldUrl` with `bank`, `branch`, `groupId`, and `memberId`. Flexhub Video PD **does not validate** those query values. They are stored as-is so recordings, duration, chat, and stills can be identified later.
 
 **Current visit for a slug:** the officer’s meeting in `WaitingForFieldOfficer` or `InProgress`, else the next `Scheduled` by time. Opening `/host/{slug}` always shows the lobby, even with no field officers and no scheduled visit (a desk visit is created when someone is admitted).
 
-**Field join:** `POST /api/join` puts the field officer in the **waiting queue** (not the LiveKit call). Missing params are stored empty. Wrong IDs are never rejected. The credit officer sees each waiting FO with their bank / group / member, **chats only with waiting officers**, then taps **Admit**. Admitted officers speak on the call; chat is not used in-call.
+**Field join:** `POST /api/join` puts the field officer in the **waiting queue** (not the LiveKit call). Missing params are stored empty. Wrong IDs are never rejected. The credit officer sees Bank → Branch → Group → Member, can chat with Everyone or privately, and then taps **Admit**. Only one FO is admitted at a time; admitted officers speak on the call and leave lobby chat.
 
-**Recording segments:** recording runs while at least one **admitted** field officer is in the LiveKit room. Start on 0→1 FO; stop on last FO leaving.
+**Recording segments:** recording starts when the admitted field officer connects and stops when they leave. Rejoining creates a new segment.
 
-`recordings/{bank}/{groupId}/{memberId}/{meetingId}/seg-{n}.mp4`
+`recordings/{bank}/{branch}/{groupId}/{memberId}/{meetingId}/seg-{n}.mp4`
 
 ## Demo accounts
 
@@ -32,9 +32,9 @@ Each credit officer gets a **permanent host slug** at user creation (unguessable
 
 Field officers have **no Flexhub Video PD account**. Open the join link, optionally set a display name (default “Field officer”), wait in the lobby, and speak after the credit officer admits you.
 
-A sample visit `VK7M2Q` is seeded for bank `SBI`, group `G-22`, member `M-10482`. Field-officer URL:
+A sample Video PD `VK7M2Q` is seeded for bank `SBI`, branch `Mumbai Central`, group `G-22`, member `M-10482`. Field-officer URL:
 
-`/join/h8k2m9q4w1?bank=SBI&groupId=G-22&memberId=M-10482`
+`/join/h8k2m9q4w1?bank=SBI&branch=Mumbai-Central&groupId=G-22&memberId=M-10482`
 
 ## Auth
 
@@ -66,12 +66,66 @@ npm run dev
 
 Without LiveKit running you can still sign in, schedule visits, and copy join links. Video connects only when the SFU is up. Room-composite MP4s need the Egress worker; if Egress is down the API still stores recording-segment metadata so the visit can complete.
 
-The local SQLite database is recreated on API start so the demo seed (including host slug `h8k2m9q4w1`) is always present.
+The local SQLite database is recreated on API start (`EnsureDeletedAsync`) so the demo seed (including host slug `h8k2m9q4w1`) is always present. That wipe is **OK for local validation only**. Production must not call `EnsureDeleted`. Postgres/RDS is preferred later.
+
+## Put this code on GitHub, then pull it onto EC2
+
+Use this sequence: download the project → create a **private GitHub** repo → clone on the server → `git pull` for later updates. Server install, env, systemd, and ALB notes live in [infra/ec2/README.md](infra/ec2/README.md) — do not paste a temporary Cloud Agent remote.
+
+### 1. Get the code
+
+From this Cloud Agent workspace, download a zip of the project (or copy the files). You can also create a GitHub repository and push this project there, then clone that repo everywhere else.
+
+Do **not** treat a Cloud Agent remote as production. Production clones come from **your GitHub repo**.
+
+### 2. Create a private GitHub repo and push `main`
+
+On GitHub: **New repository** → private → name it something like `Flexhub-VideoPD` (or `FlexHub-VideoPD` if you already use that). Do not initialize with a README if you are pushing an existing tree.
+
+On your laptop, in the project folder:
+
+```bash
+git init
+git add .
+git commit -m "Flexhub Video PD"
+git branch -M main
+git remote add origin git@github.com:YOUR_ORG/Flexhub-VideoPD.git
+git push -u origin main
+```
+
+If this folder is already a git repo, skip `git init` and only add the GitHub remote (use another remote name if `origin` is taken):
+
+```bash
+git remote add github git@github.com:YOUR_ORG/Flexhub-VideoPD.git
+git push -u github main
+```
+
+### 3. On the EC2 server: install git, clone, pull later
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git
+sudo mkdir -p /opt/videopd
+sudo chown "$USER":"$USER" /opt/videopd
+cd /opt/videopd
+git clone git@github.com:YOUR_ORG/Flexhub-VideoPD.git .
+```
+
+Later updates:
+
+```bash
+cd /opt/videopd
+git pull origin main
+```
+
+Then follow [infra/ec2/README.md](infra/ec2/README.md) to run LiveKit, the ASP.NET API (5088), and Next.js (43123 locally; `videopd.nocpl.in` sits behind the ALB).
 
 ## What is in the product
 
-- Host lobby open all day: waiting FO list, lobby chat, credit officer Admit
-- Open field-officer join with bank / group / member tagging (no ID validation)
+- Admin officer creation with permanent host URLs
+- Host lobby: waiting durations, Everyone/private chat, Admit and Remove
+- One active FO at a time with focused video and field-officer timer
+- Open field-officer join with bank / branch / group / member tagging (no ID validation)
 - Recording segments start and stop on FO join/leave webhooks
 - Capture a frame from live video, crop it, store it against bank/group/member
 - Meeting APIs under `/api/meetings`
@@ -81,11 +135,13 @@ The local SQLite database is recreated on API start so the demo seed (including 
 
 A single **c6i.2xlarge** (or **c7i.2xlarge**) is enough for about **100 concurrent users** in 3-person rooms (1 credit officer + 2 field officers). That is the SFU and API. Room-composite recording is the limiter (~4 vCPU per concurrent Chrome job). Two overlapping recordings can stay on that box; more should use a second Egress instance.
 
-Follow [infra/ec2/README.md](infra/ec2/README.md) for ports, DNS, Caddy, and systemd. This repo does not provision AWS for you.
+Production: `videopd.nocpl.in` on **ALB + ACM**; `livekit.nocpl.in` and `turn.nocpl.in` stay on the instance.
+
+Follow [infra/ec2/README.md](infra/ec2/README.md) for clone/pull, quoted SQLite env, systemd unit files, ALB/Caddy, and the three processes. This repo does not provision AWS for you.
 
 ## Layout
 
 - `api/VisitMeet.Api` — JWT auth, meetings, anonymous join, host tokens, webhooks, Egress, SignalR, SQLite
 - `web` — schedule-only dashboard, static host room, open join page, LiveKit call, chat, snapshot crop
 - `infra/livekit` — Compose + YAML
-- `infra/ec2` — security group, env sample, runbook
+- `infra/ec2` — security group, env sample, systemd units, runbook

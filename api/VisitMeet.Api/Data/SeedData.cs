@@ -38,6 +38,7 @@ public static class SeedData
             Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             Code = "VK7M2Q",
             Bank = "SBI",
+            Branch = "Mumbai Central",
             GroupId = "G-22",
             MemberId = "M-10482",
             MemberName = "Lakshmi Self-Help Group — Meena Devi",

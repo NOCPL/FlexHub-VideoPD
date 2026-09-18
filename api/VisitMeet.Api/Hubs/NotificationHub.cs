@@ -27,6 +27,7 @@ public class NotificationHub(MeetingService meetings) : Hub
         if (!string.IsNullOrEmpty(hostSlug))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"host:{hostSlug}");
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby:{hostSlug}");
         }
 
         await base.OnConnectedAsync();

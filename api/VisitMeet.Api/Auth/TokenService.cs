@@ -25,7 +25,12 @@ public class TokenService(IConfiguration config)
         return Write(claims, TimeSpan.FromHours(12));
     }
 
-    public string CreateGuestToken(Guid guestId, string displayName, Guid waitingOfficerId, Guid? meetingId = null)
+    public string CreateGuestToken(
+        Guid guestId,
+        string displayName,
+        Guid waitingOfficerId,
+        string hostSlug,
+        Guid? meetingId = null)
     {
         var claims = new List<Claim>
         {
@@ -33,7 +38,8 @@ public class TokenService(IConfiguration config)
             new(ClaimTypes.NameIdentifier, guestId.ToString()),
             new(ClaimTypes.Name, displayName),
             new(ClaimTypes.Role, Roles.FieldGuest),
-            new("waitingId", waitingOfficerId.ToString())
+            new("waitingId", waitingOfficerId.ToString()),
+            new("hostSlug", hostSlug)
         };
         if (meetingId is Guid mid)
         {

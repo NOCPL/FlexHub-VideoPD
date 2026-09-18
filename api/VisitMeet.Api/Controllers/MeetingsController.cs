@@ -136,7 +136,7 @@ public class MeetingsController(
         if (!CanAccess(meeting)) return Forbid();
         var snapshot = await meetings.SaveSnapshotAsync(meeting, User.GetUserId(), file, cropX, cropY, cropWidth, cropHeight);
         var dto = new SnapshotDto(
-            snapshot.Id, snapshot.Bank, snapshot.GroupId, snapshot.MemberId,
+            snapshot.Id, snapshot.Bank, snapshot.Branch, snapshot.GroupId, snapshot.MemberId,
             $"/api/meetings/{meeting.Id}/snapshots/{snapshot.Id}/file",
             snapshot.CropX, snapshot.CropY, snapshot.CropWidth, snapshot.CropHeight, snapshot.CreatedAt);
         return Created(dto.Url, dto);

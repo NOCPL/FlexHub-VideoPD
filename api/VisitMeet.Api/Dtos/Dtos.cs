@@ -8,6 +8,7 @@ public record AuthResponse(string Token, UserDto User);
 
 public record ScheduleMeetingRequest(
     string? Bank,
+    string? Branch,
     string? GroupId,
     string? MemberId,
     string? MemberName,
@@ -17,16 +18,20 @@ public record ScheduleMeetingRequest(
 public record JoinMeetingRequest(
     string Slug,
     string? Bank,
+    string? Branch,
     string? GroupId,
     string? MemberId,
     string? DisplayName);
 
 public record ChatPostRequest(string Body);
+public record LobbyChatRequest(string Body, Guid? RecipientWaitingOfficerId);
+public record CreateCreditOfficerRequest(string Name, string Email, string TemporaryPassword);
 
 public record MeetingListItemDto(
     Guid Id,
     string Code,
     string Bank,
+    string Branch,
     string GroupId,
     string MemberId,
     string MemberName,
@@ -46,6 +51,7 @@ public record RecordingDto(
     string Status,
     int Sequence,
     string Bank,
+    string Branch,
     string GroupId,
     string MemberId,
     string? FilePath,
@@ -58,6 +64,7 @@ public record RecordingDto(
 public record SnapshotDto(
     Guid Id,
     string Bank,
+    string Branch,
     string GroupId,
     string MemberId,
     string Url,
@@ -75,10 +82,20 @@ public record ChatMessageDto(
     string Body,
     DateTimeOffset SentAt);
 
+public record LobbyMessageDto(
+    Guid Id,
+    Guid SenderUserId,
+    string SenderName,
+    string SenderRole,
+    Guid? RecipientWaitingOfficerId,
+    string Body,
+    DateTimeOffset SentAt);
+
 public record MeetingDetailDto(
     Guid Id,
     string Code,
     string Bank,
+    string Branch,
     string GroupId,
     string MemberId,
     string MemberName,
@@ -106,12 +123,19 @@ public record WaitingOfficerDto(
     Guid Id,
     string DisplayName,
     string Bank,
+    string Branch,
     string GroupId,
     string MemberId,
     string Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset? AdmittedAt,
-    IReadOnlyList<ChatMessageDto> Chat);
+    DateTimeOffset? ConnectedAt,
+    DateTimeOffset? LeftAt,
+    int? CallDurationSeconds);
+
+public record WaitingRoomDto(
+    WaitingOfficerDto Waiting,
+    IReadOnlyList<LobbyMessageDto> Chat);
 
 public record WaitResponse(
     string GuestToken,
@@ -122,7 +146,9 @@ public record WaitResponse(
 public record HostLobbyDto(
     UserDto Officer,
     MeetingDetailDto? Meeting,
-    IReadOnlyList<WaitingOfficerDto> Waiting);
+    IReadOnlyList<WaitingOfficerDto> Waiting,
+    WaitingOfficerDto? Active,
+    IReadOnlyList<LobbyMessageDto> Chat);
 
 public record AdmitResponse(
     JoinTokenResponse Field,
@@ -135,5 +161,6 @@ public record NotificationPayload(
     string Code,
     string Message,
     string? Bank,
+    string? Branch,
     string? GroupId,
     string? MemberId);

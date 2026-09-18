@@ -29,7 +29,9 @@ public static class WaitingStatuses
 {
     public const string Waiting = "Waiting";
     public const string Admitted = "Admitted";
+    public const string Connected = "Connected";
     public const string Left = "Left";
+    public const string Denied = "Denied";
 }
 
 public class User
@@ -47,6 +49,7 @@ public class Meeting
     public Guid Id { get; set; }
     public string Code { get; set; } = "";
     public string Bank { get; set; } = "";
+    public string Branch { get; set; } = "";
     public string GroupId { get; set; } = "";
     public string MemberId { get; set; } = "";
     public string MemberName { get; set; } = "";
@@ -73,6 +76,7 @@ public class Recording
     public string? EgressId { get; set; }
     public string Status { get; set; } = RecordingStatuses.Starting;
     public string Bank { get; set; } = "";
+    public string Branch { get; set; } = "";
     public string GroupId { get; set; } = "";
     public string MemberId { get; set; } = "";
     public int Sequence { get; set; }
@@ -90,6 +94,7 @@ public class Snapshot
     public Guid MeetingId { get; set; }
     public Meeting? Meeting { get; set; }
     public string Bank { get; set; } = "";
+    public string Branch { get; set; } = "";
     public string GroupId { get; set; } = "";
     public string MemberId { get; set; } = "";
     public string FileName { get; set; } = "";
@@ -123,20 +128,24 @@ public class WaitingOfficer
     public Guid? MeetingId { get; set; }
     public string DisplayName { get; set; } = "";
     public string Bank { get; set; } = "";
+    public string Branch { get; set; } = "";
     public string GroupId { get; set; } = "";
     public string MemberId { get; set; } = "";
     public string Status { get; set; } = WaitingStatuses.Waiting;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? AdmittedAt { get; set; }
+    public DateTimeOffset? ConnectedAt { get; set; }
     public DateTimeOffset? LeftAt { get; set; }
+    public int? CallDurationSeconds { get; set; }
     public ICollection<LobbyMessage> Messages { get; set; } = new List<LobbyMessage>();
 }
 
 public class LobbyMessage
 {
     public Guid Id { get; set; }
-    public Guid WaitingOfficerId { get; set; }
-    public WaitingOfficer? WaitingOfficer { get; set; }
+    public string HostSlug { get; set; } = "";
+    public Guid? RecipientWaitingOfficerId { get; set; }
+    public WaitingOfficer? RecipientWaitingOfficer { get; set; }
     public Guid SenderUserId { get; set; }
     public string SenderName { get; set; } = "";
     public string SenderRole { get; set; } = "";

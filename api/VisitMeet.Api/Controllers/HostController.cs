@@ -28,7 +28,7 @@ public class HostController(MeetingService meetings, LobbyService lobby, LiveKit
         if (officer is null) return NotFound(new { message = "Unknown host link." });
         if (!CanOpen(officer)) return Forbid();
         var list = await lobby.ListWaitingAsync(slug);
-        return list.Select(w => lobby.ToDto(w)).ToList();
+        return list.Select(lobby.ToDto).ToList();
     }
 
     [HttpPost("{slug}/waiting/{id:guid}/admit")]

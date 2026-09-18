@@ -10,11 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError, getToken, hubUrl, setGuestToken } from "@/lib/api";
-import type { ChatMessage, JoinTokenResponse, User, WaitingOfficer } from "@/lib/types";
+import type { JoinTokenResponse, LobbyMessage, User, WaitingOfficer } from "@/lib/types";
 
 export default function JoinPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-muted-foreground">Loading join link…</div>}>
+    <Suspense fallback={<div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading join link…</div>}>
       <JoinBody />
     </Suspense>
   );
@@ -26,6 +26,7 @@ function JoinBody() {
   const router = useRouter();
   const slug = params.slug ?? "";
   const bank = search.get("bank") ?? "";
+  const branch = search.get("branch") ?? "";
   const groupId = search.get("groupId") ?? "";
   const memberId = search.get("memberId") ?? "";
   const [name, setName] = useState("Field officer");
@@ -33,6 +34,9 @@ function JoinBody() {
   const [busy, setBusy] = useState(false);
   const [creditOfficerName, setCreditOfficerName] = useState("the credit officer");
   const [waiting, setWaiting] = useState<WaitingOfficer | null>(null);
+  const [messages, setMessages] = useState<LobbyMessage[]>([]);
+  const [chatTarget, setChatTarget] = useState<"all" | "private">("all");
+  const [denied, setDenied] = useState(false);
   const [draft, setDraft] = useState("");
   const [session, setSession] = useState<JoinTokenResponse | null>(null);
   const [guest, setGuest] = useState<User | null>(null);
@@ -43,15 +47,17 @@ function JoinBody() {
     setWaiting(null);
     setSession(null);
     setGuest(null);
+    setMessages([]);
+    setDenied(false);
     setGuestToken(null);
     setError(null);
-  }, [slug, bank, groupId, memberId]);
+  }, [slug, bank, branch, groupId, memberId]);
 
   async function join() {
     setBusy(true);
     setError(null);
     try {
-      const result = await api.join({ slug, bank, groupId, memberId, displayName: name });
+      const result = await api.join({ slug, bank, branch, groupId, memberId, displayName: name });
       setGuestToken(result.guestToken);
       setCreditOfficerName(result.creditOfficerName);
       setWaiting(result.waiting);
@@ -87,30 +93,38 @@ function JoinBody() {
       .configureLogging(LogLevel.Warning)
       .build();
 
-    connection.on("lobbyChat", (_waitingId: string, message: ChatMessage) => {
-      setWaiting((current) =>
-        current ? { ...current, chat: [...current.chat, message] } : current,
-      );
+    connection.on("lobbyChat", (message: LobbyMessage) => {
+      setMessages((current) => current.some((m) => m.id === message.id) ? current : [...current, message]);
     });
     connection.on("admitted", (joinSession: JoinTokenResponse) => {
       connectingRef.current = true;
       setGuestToken(joinSession.guestToken);
       setSession(joinSession);
     });
-
-    connection.start().catch((err: Error) => {
-      if (cancelled) return;
-      if ((err?.message ?? "").includes("stopped during negotiation")) return;
+    connection.on("denied", () => {
+      setDenied(true);
+      setGuestToken(null);
     });
+
+    const connect = window.setTimeout(() => {
+      if (cancelled) return;
+      connection.start().catch((err: Error) => {
+        if (cancelled) return;
+        if ((err?.message ?? "").includes("stopped during negotiation")) return;
+      });
+    }, 50);
 
     const poll = window.setInterval(() => {
       api
         .waiting(waiting.id)
         .then(async (latest) => {
-          setWaiting((current) =>
-            current ? { ...latest, chat: latest.chat.length ? latest.chat : current.chat } : latest,
-          );
-          if (latest.status === "Admitted" && !cancelled && !connectingRef.current) {
+          setWaiting(latest.waiting);
+          setMessages(latest.chat ?? []);
+          if (latest.waiting.status === "Denied") {
+            setDenied(true);
+            setGuestToken(null);
+          }
+          if (latest.waiting.status === "Admitted" && !cancelled && !connectingRef.current) {
             connectingRef.current = true;
             const joinSession = await api.waitingConnect(waiting.id);
             setGuestToken(joinSession.guestToken);
@@ -122,6 +136,7 @@ function JoinBody() {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(connect);
       window.clearInterval(poll);
       void connection.stop();
     };
@@ -134,10 +149,12 @@ function JoinBody() {
     if (!body) return;
     setDraft("");
     try {
-      const saved = await api.waitingChat(waiting.id, body);
-      setWaiting((current) =>
-        current ? { ...current, chat: [...current.chat, saved] } : current,
+      const saved = await api.waitingChat(
+        waiting.id,
+        body,
+        chatTarget === "all" ? null : waiting.id,
       );
+      setMessages((current) => current.some((m) => m.id === saved.id) ? current : [...current, saved]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chat could not be sent.");
     }
@@ -154,7 +171,7 @@ function JoinBody() {
     setGuestToken(null);
     setWaiting(null);
     router.push(
-      `/join/${slug}?bank=${encodeURIComponent(bank)}&groupId=${encodeURIComponent(groupId)}&memberId=${encodeURIComponent(memberId)}`,
+      `/join/${slug}?bank=${encodeURIComponent(bank)}&branch=${encodeURIComponent(branch)}&groupId=${encodeURIComponent(groupId)}&memberId=${encodeURIComponent(memberId)}`,
     );
   }
 
@@ -171,7 +188,7 @@ function JoinBody() {
             setSession(null);
             setWaiting(null);
             router.push(
-              `/join/${slug}?bank=${encodeURIComponent(bank)}&groupId=${encodeURIComponent(groupId)}&memberId=${encodeURIComponent(memberId)}`,
+              `/join/${slug}?bank=${encodeURIComponent(bank)}&branch=${encodeURIComponent(branch)}&groupId=${encodeURIComponent(groupId)}&memberId=${encodeURIComponent(memberId)}`,
             );
           }}
         />
@@ -179,28 +196,66 @@ function JoinBody() {
     );
   }
 
-  if (waiting) {
+  if (denied) {
     return (
-      <main className="mx-auto grid max-w-3xl gap-4 px-4 py-10 md:grid-cols-[1fr_280px]">
-        <Card>
+      <main className="flex min-h-full items-center justify-center bg-[#eef1f6] p-4">
+        <Card className="max-w-md border border-[#d7deea] bg-white text-center">
           <CardHeader>
-            <CardTitle>Waiting for {creditOfficerName}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-[#10264e]">The credit officer could not accept this Video PD</CardTitle>
+            <CardDescription className="text-[#5a6a84]">You have been removed from the waiting room. Contact your team if you need another link.</CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
+  if (waiting) {
+    const visibleMessages = (messages ?? []).filter((message) =>
+      chatTarget === "all"
+        ? message.recipientWaitingOfficerId === null
+        : message.recipientWaitingOfficerId === waiting.id);
+    return (
+      <main className="min-h-full bg-[#eef1f6]">
+        <div className="mx-auto grid max-w-3xl gap-4 px-4 py-10 md:grid-cols-[1fr_280px]">
+        <Card className="border border-[#d7deea] bg-white">
+          <CardHeader>
+            <CardTitle className="text-[#10264e]">Waiting for {creditOfficerName}</CardTitle>
+            <CardDescription className="text-[#5a6a84]">
               You are not in the call yet. Chat here until the credit officer admits you, then speak
               on the call.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex h-[28rem] flex-col">
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto text-sm">
-              {waiting.chat.length === 0 ? (
-                <p className="text-muted-foreground">No messages yet.</p>
+              <div className="mb-3 flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={chatTarget === "all" ? "border-transparent bg-[#10264e] text-white hover:bg-[#29416f] hover:text-white" : ""}
+                  onClick={() => setChatTarget("all")}
+                >
+                  Everyone
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={chatTarget === "private" ? "border-transparent bg-[#10264e] text-white hover:bg-[#29416f] hover:text-white" : ""}
+                  onClick={() => setChatTarget("private")}
+                >
+                  Credit officer
+                </Button>
+              </div>
+              {visibleMessages.length === 0 ? (
+                <p className="text-[#5a6a84]">No messages yet.</p>
               ) : (
-                waiting.chat.map((m) => (
+                visibleMessages.map((m) => (
                   <div key={m.id}>
-                    <div className="text-muted-foreground text-xs">
+                    <div className="text-xs text-[#5a6a84]">
                       {m.senderName} · {m.senderRole === "FieldGuest" ? "You" : "Credit"}
                     </div>
-                    <div>{m.body}</div>
+                    <div className="text-[#10264e]">{m.body}</div>
                   </div>
                 ))
               )}
@@ -211,16 +266,17 @@ function JoinBody() {
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Message the credit officer"
               />
-              <Button type="submit">Send</Button>
+              <Button type="submit" className="bg-[#f7481c] text-white hover:bg-[#d63a11]">Send</Button>
             </form>
           </CardContent>
         </Card>
-        <Card className="h-fit">
+        <Card className="h-fit border border-[#d7deea] bg-white">
           <CardHeader>
-            <CardTitle className="text-base">Your visit tags</CardTitle>
+            <CardTitle className="text-base text-[#10264e]">Your Video PD tags</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-2 text-sm text-[#29416f]">
             <p>Bank: {waiting.bank || bank || "—"}</p>
+            <p>Branch: {waiting.branch || branch || "—"}</p>
             <p>Group: {waiting.groupId || groupId || "—"}</p>
             <p>Member: {waiting.memberId || memberId || "—"}</p>
             <Button variant="outline" className="mt-2 w-full" onClick={leaveWait}>
@@ -228,33 +284,39 @@ function JoinBody() {
             </Button>
           </CardContent>
         </Card>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-10">
-      <Card>
+    <main className="min-h-full bg-[#eef1f6]">
+      <div className="mx-auto max-w-lg px-4 py-10">
+      <Card className="border border-[#d7deea] bg-white">
         <CardHeader>
-          <CardTitle>Join visit</CardTitle>
-          <CardDescription>
-            You will wait until the credit officer admits you. Bank, group, and member IDs are stored
+          <CardTitle className="text-[#10264e]">Join Video PD</CardTitle>
+          <CardDescription className="text-[#5a6a84]">
+            You will wait until the credit officer admits you. Bank, branch, group, and member IDs are stored
             as-is. They are not validated here.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <dl className="grid grid-cols-3 gap-3 text-sm">
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div>
-              <dt className="text-muted-foreground">Bank</dt>
-              <dd className="font-medium">{bank || "—"}</dd>
+              <dt className="text-[#5a6a84]">Bank</dt>
+              <dd className="font-medium text-[#10264e]">{bank || "—"}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Group ID</dt>
-              <dd className="font-medium">{groupId || "—"}</dd>
+              <dt className="text-[#5a6a84]">Branch</dt>
+              <dd className="font-medium text-[#10264e]">{branch || "—"}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Member ID</dt>
-              <dd className="font-medium">{memberId || "—"}</dd>
+              <dt className="text-[#5a6a84]">Group ID</dt>
+              <dd className="font-medium text-[#10264e]">{groupId || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[#5a6a84]">Member ID</dt>
+              <dd className="font-medium text-[#10264e]">{memberId || "—"}</dd>
             </div>
           </dl>
           <div className="space-y-1.5">
@@ -262,11 +324,12 @@ function JoinBody() {
             <Input id="displayName" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <Button className="w-full" disabled={busy} onClick={join}>
+          <Button className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy} onClick={join}>
             {busy ? "Joining queue…" : "Wait for the credit officer"}
           </Button>
         </CardContent>
       </Card>
+      </div>
     </main>
   );
 }
