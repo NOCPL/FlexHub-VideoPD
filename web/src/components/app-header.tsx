@@ -1,18 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/components/auth-provider";
+import { useRouter } from "next/navigation";
 import { Bell, CalendarPlus, ListVideo, Users, Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/components/auth-provider";
+import { useNotifications } from "@/components/notification-center";
 
-export function AppHeader({
-  waitingCount = 0,
-  unreadCount = 0,
-}: {
-  waitingCount?: number;
-  unreadCount?: number;
-}) {
+export function AppHeader() {
   const { user, logout } = useAuth();
+  const { notices, unreadCount, markRead, markAllRead } = useNotifications();
+  const router = useRouter();
+
   return (
     <header className="border-b border-border/80 bg-[#10264e] text-white">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4">
@@ -43,19 +50,62 @@ export function AppHeader({
         <div className="flex-1" />
         {user ? (
           <div className="flex items-center gap-3 text-sm">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative text-white hover:bg-white/10 hover:text-white"
-              title={`${waitingCount} waiting, ${unreadCount} unread`}
-            >
-              <Bell />
-              {waitingCount + unreadCount > 0 ? (
-                <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[#f7481c] px-1 text-center text-[10px] leading-4 text-white">
-                  {waitingCount + unreadCount}
-                </span>
-              ) : null}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-white hover:bg-white/10 hover:text-white"
+                  title={`${unreadCount} unread notifications`}
+                >
+                  <Bell />
+                  {unreadCount > 0 ? (
+                    <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[#f7481c] px-1 text-center text-[10px] leading-4 text-white">
+                      {unreadCount}
+                    </span>
+                  ) : null}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-0">
+                <div className="flex items-center justify-between px-3 py-2">
+                  <DropdownMenuLabel className="p-0 text-[#10264e]">Notifications</DropdownMenuLabel>
+                  {unreadCount > 0 ? (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-[#29416f] hover:underline"
+                      onClick={() => markAllRead()}
+                    >
+                      Mark all read
+                    </button>
+                  ) : null}
+                </div>
+                <DropdownMenuSeparator className="m-0" />
+                {notices.length === 0 ? (
+                  <p className="px-3 py-6 text-center text-sm text-[#5a6a84]">No notifications yet.</p>
+                ) : (
+                  <div className="max-h-80 overflow-y-auto">
+                    {notices.map((notice) => (
+                      <DropdownMenuItem
+                        key={notice.id}
+                        className={`items-start gap-2 rounded-none px-3 py-2 ${notice.read ? "" : "bg-[#fff7f2]"}`}
+                        onSelect={() => {
+                          markRead(notice.id);
+                          router.push(notice.href);
+                        }}
+                      >
+                        <span className="mt-1 size-2 shrink-0 rounded-full bg-[#f7481c]" style={{ visibility: notice.read ? "hidden" : "visible" }} />
+                        <span className="min-w-0">
+                          <span className="block font-medium text-[#10264e]">{notice.title}</span>
+                          {notice.description ? (
+                            <span className="mt-0.5 block truncate text-xs text-[#5a6a84]">{notice.description}</span>
+                          ) : null}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="hidden text-right sm:block">
               <div className="font-medium">{user.name}</div>
               <div className="text-xs text-[#a9bdd9]">

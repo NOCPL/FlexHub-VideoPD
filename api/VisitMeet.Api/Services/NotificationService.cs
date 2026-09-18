@@ -87,7 +87,9 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             hub.Clients.Group($"host:{slug}").SendAsync("admitted", waitingId, host));
 
     public Task ActiveOfficerEndedAsync(string slug, Guid waitingId, int durationSeconds) =>
-        hub.Clients.Group($"host:{slug}").SendAsync("activeEnded", waitingId, durationSeconds);
+        Task.WhenAll(
+            hub.Clients.Group($"host:{slug}").SendAsync("activeEnded", waitingId, durationSeconds),
+            hub.Clients.Group($"waiting:{waitingId}").SendAsync("meetingEnded", durationSeconds));
 
     public Task ActiveOfficerConnectedAsync(string slug, Guid waitingId, DateTimeOffset connectedAt) =>
         hub.Clients.Group($"host:{slug}").SendAsync("activeConnected", waitingId, connectedAt);

@@ -40,7 +40,10 @@ function JoinBody() {
   const [draft, setDraft] = useState("");
   const [session, setSession] = useState<JoinTokenResponse | null>(null);
   const [guest, setGuest] = useState<User | null>(null);
+  const [callEnded, setCallEnded] = useState(false);
   const connectingRef = useRef(false);
+  const inCallRef = useRef(false);
+  const endedRef = useRef(false);
 
   useEffect(() => {
     connectingRef.current = false;
@@ -49,8 +52,11 @@ function JoinBody() {
     setGuest(null);
     setMessages([]);
     setDenied(false);
+    setCallEnded(false);
     setGuestToken(null);
     setError(null);
+    inCallRef.current = false;
+    endedRef.current = false;
   }, [slug, bank, branch, groupId, memberId]);
 
   async function join() {
@@ -77,7 +83,7 @@ function JoinBody() {
   }
 
   useEffect(() => {
-    if (!waiting || session) return;
+    if (!waiting) return;
     const token = getToken();
     if (!token) return;
     let cancelled = false;
@@ -99,11 +105,20 @@ function JoinBody() {
     connection.on("admitted", (joinSession: JoinTokenResponse) => {
       if (!isLiveKitSession(joinSession)) return;
       connectingRef.current = true;
+      inCallRef.current = true;
       setGuestToken(joinSession.guestToken);
       setSession(joinSession);
     });
     connection.on("denied", () => {
       setDenied(true);
+      setGuestToken(null);
+      setSession(null);
+    });
+    connection.on("meetingEnded", () => {
+      endedRef.current = true;
+      inCallRef.current = false;
+      setCallEnded(true);
+      setSession(null);
       setGuestToken(null);
     });
 
@@ -124,9 +139,18 @@ function JoinBody() {
           if (latest.waiting.status === "Denied") {
             setDenied(true);
             setGuestToken(null);
+            setSession(null);
+          }
+          if (latest.waiting.status === "Left" && inCallRef.current) {
+            endedRef.current = true;
+            setCallEnded(true);
+            setSession(null);
+            setGuestToken(null);
+            inCallRef.current = false;
           }
           if (latest.waiting.status === "Admitted" && !cancelled && !connectingRef.current) {
             connectingRef.current = true;
+            inCallRef.current = true;
             const joinSession = await api.waitingConnect(waiting.id);
             setGuestToken(joinSession.guestToken);
             setSession(joinSession);
@@ -141,7 +165,7 @@ function JoinBody() {
       window.clearInterval(poll);
       void connection.stop();
     };
-  }, [waiting?.id, session]);
+  }, [waiting?.id]);
 
   async function sendChat(e: FormEvent) {
     e.preventDefault();
@@ -176,6 +200,21 @@ function JoinBody() {
     );
   }
 
+  if (callEnded) {
+    return (
+      <main className="flex min-h-full items-center justify-center bg-[#eef1f6] p-4">
+        <Card className="max-w-md border border-[#d7deea] bg-white text-center">
+          <CardHeader>
+            <CardTitle className="text-[#10264e]">This Video PD has ended</CardTitle>
+            <CardDescription className="text-[#5a6a84]">
+              The credit officer ended the call. You can close this page.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
   if (session && guest && session.meeting && session.token) {
     return (
       <div className="flex h-dvh flex-col">
@@ -187,6 +226,8 @@ function JoinBody() {
           onLeave={() => {
             setGuestToken(null);
             setSession(null);
+            inCallRef.current = false;
+            if (endedRef.current) return;
             setWaiting(null);
             router.push(
               `/join/${slug}?bank=${encodeURIComponent(bank)}&branch=${encodeURIComponent(branch)}&groupId=${encodeURIComponent(groupId)}&memberId=${encodeURIComponent(memberId)}`,
@@ -202,8 +243,10 @@ function JoinBody() {
       <main className="flex min-h-full items-center justify-center bg-[#eef1f6] p-4">
         <Card className="max-w-md border border-[#d7deea] bg-white text-center">
           <CardHeader>
-            <CardTitle className="text-[#10264e]">The credit officer could not accept this Video PD</CardTitle>
-            <CardDescription className="text-[#5a6a84]">You have been removed from the waiting room. Contact your team if you need another link.</CardDescription>
+            <CardTitle className="text-[#10264e]">The credit officer declined this Video PD</CardTitle>
+            <CardDescription className="text-[#5a6a84]">
+              You were not admitted to the call. Ask your team for a new join link if you still need to complete Video PD.
+            </CardDescription>
           </CardHeader>
         </Card>
       </main>

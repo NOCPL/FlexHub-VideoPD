@@ -6,9 +6,11 @@ import { toast } from "sonner";
 import { getAuthToken, hubUrl } from "@/lib/api";
 import type { NotificationPayload } from "@/lib/types";
 import { useAuth } from "@/components/auth-provider";
+import { useNotifications } from "@/components/notification-center";
 
 export function NotificationListener() {
   const { user } = useAuth();
+  const { addFromPayload } = useNotifications();
 
   useEffect(() => {
     if (!user) return;
@@ -29,6 +31,7 @@ export function NotificationListener() {
       .build();
 
     connection.on("notify", (payload: NotificationPayload) => {
+      addFromPayload(payload);
       toast(payload.message, {
         description:
           payload.bank || payload.groupId
@@ -61,7 +64,7 @@ export function NotificationListener() {
       window.clearTimeout(connect);
       void connection.stop();
     };
-  }, [user]);
+  }, [user, addFromPayload]);
 
   return null;
 }

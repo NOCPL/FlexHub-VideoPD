@@ -11,8 +11,23 @@ import {
   VideoTrack,
   type TrackReference,
 } from "@livekit/components-react";
-import { ConnectionState, RoomEvent, Track } from "livekit-client";
-import { Camera, Mic, MicOff, MonitorUp, PhoneOff, Video, VideoOff } from "lucide-react";
+import {
+  ConnectionState,
+  Room,
+  RoomEvent,
+  Track,
+  facingModeFromLocalTrack,
+} from "livekit-client";
+import {
+  Camera,
+  Mic,
+  MicOff,
+  MonitorUp,
+  PhoneOff,
+  SwitchCamera,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -55,11 +70,27 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [captureSrc, setCaptureSrc] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
-  const [callSeconds, setCallSeconds] = useState(0);
+  const [flipping, setFlipping] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const now = useNow();
   const stageRef = useRef<HTMLDivElement>(null);
 
-  const fieldPresent = participants.some((p) => p.identity.startsWith("fo-"));
-  const waiting = (user.role === "CreditOfficer" || user.role === "Admin") && !fieldPresent;
+  const remoteOfficerPresent = participants.some(
+    (p) => !p.isLocal && p.identity.startsWith("fo-"),
+  );
+  const waitingForField =
+    (user.role === "CreditOfficer" || user.role === "Admin") && !remoteOfficerPresent;
+  const timerRunning =
+    user.role === "FieldGuest"
+      ? room.state === ConnectionState.Connected
+      : remoteOfficerPresent;
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    setStartedAt((current) => current ?? Date.now());
+  }, [timerRunning]);
+
+  const callSeconds = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0;
 
   useEffect(() => {
     const onMedia = () => {
@@ -71,12 +102,6 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
     };
   }, [room]);
 
-  useEffect(() => {
-    if (!fieldPresent) return;
-    const timer = window.setInterval(() => setCallSeconds((seconds) => seconds + 1), 1000);
-    return () => window.clearInterval(timer);
-  }, [fieldPresent]);
-
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: false },
@@ -85,15 +110,17 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
     { onlySubscribed: false },
   );
   const cameraTracks = tracks.filter((t): t is TrackReference => Boolean(t.publication?.track));
-  const fieldTrack = cameraTracks.find((track) => track.participant.identity.startsWith("fo-"));
   const selfTrack = cameraTracks.find((track) => track.participant.isLocal);
+  const remoteTrack = cameraTracks.find((track) => !track.participant.isLocal);
+  const mainTrack = remoteTrack ?? selfTrack;
 
   function capture() {
     const videos = stageRef.current?.querySelectorAll("video") ?? [];
-    const remote = Array.from(videos).find((v) => !v.srcObject || v.classList.contains("remote")) ?? videos[0];
     const preferred =
-      Array.from(videos).find((v) => (v.parentElement?.getAttribute("data-identity") ?? "").startsWith("fo-")) ??
-      remote;
+      Array.from(videos).find((v) => {
+        const identity = v.parentElement?.getAttribute("data-identity") ?? "";
+        return identity && !identity.startsWith("local-");
+      }) ?? videos[0];
     if (!preferred) {
       toast.error("No video frame is available yet.");
       return;
@@ -102,6 +129,43 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
       setCaptureSrc(captureVideoFrame(preferred));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not capture video.");
+    }
+  }
+
+  async function flipCamera() {
+    setFlipping(true);
+    try {
+      const publication = localParticipant.getTrackPublication(Track.Source.Camera);
+      const localTrack = publication?.track;
+      const devices = await Room.getLocalDevices("videoinput");
+      const currentId = localTrack?.mediaStreamTrack.getSettings().deviceId;
+      const currentIndex = Math.max(
+        0,
+        devices.findIndex((device) => device.deviceId === currentId),
+      );
+
+      if (devices.length > 1) {
+        const next = devices[(currentIndex + 1) % devices.length];
+        await room.switchActiveDevice("videoinput", next.deviceId);
+        return;
+      }
+
+      const currentFacing =
+        localTrack && facingModeFromLocalTrack(localTrack).facingMode === "environment"
+          ? "environment"
+          : "user";
+      const nextFacing = currentFacing === "user" ? "environment" : "user";
+      await localParticipant.setCameraEnabled(false);
+      await localParticipant.setCameraEnabled(true, { facingMode: nextFacing });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not switch camera.");
+      try {
+        await localParticipant.setCameraEnabled(true);
+      } catch {
+        /* ignore */
+      }
+    } finally {
+      setFlipping(false);
     }
   }
 
@@ -119,57 +183,56 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-[#0b1b36] text-white shadow-2xl">
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-[#10264e] px-4 py-3 text-sm">
-        <div>
-          <div className="font-medium">{meeting.memberName || meeting.memberId || "Video PD"}</div>
-          <div className="text-[#a9bdd9]">
-            {meeting.bank || "—"} · {meeting.branch || "—"} · {meeting.groupId || "—"} · {meeting.memberId || "—"}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {fieldPresent ? (
-            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs">
-              <span className="size-2 animate-pulse rounded-full bg-[#f7481c]" />
-              <span>REC</span>
-            </div>
-          ) : null}
-          <div className="rounded-full bg-white/10 px-3 py-1 font-mono text-xs">
-            {fieldPresent ? formatDuration(callSeconds) : room.state === ConnectionState.Connected ? "Connected" : room.state}
-          </div>
-        </div>
-      </div>
-
       {mediaError ? <div className="bg-red-900/60 px-4 py-2 text-sm">{mediaError}</div> : null}
 
-      <div ref={stageRef} className="relative min-h-0 flex-1 bg-[radial-gradient(120%_90%_at_50%_15%,#16315c_0%,#0b1b36_60%,#08142a_100%)] p-3">
-        {waiting ? (
-          <div className="absolute inset-3 z-10 flex flex-col items-center justify-center rounded-xl border border-dashed border-white/20 bg-black/55 text-center">
+      <div ref={stageRef} className="relative min-h-0 flex-1 bg-black">
+        {waitingForField ? (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/55 text-center">
             <p className="text-lg font-medium">Waiting for the admitted officer to connect</p>
             <p className="mt-2 max-w-md text-sm text-white/70">
-              Speak with them in this call. Chat stays on the lobby list for field officers who are still waiting.
+              Their video fills this screen. Chat stays on the waiting list.
             </p>
           </div>
         ) : null}
-        {fieldTrack ? (
-          <div data-identity={fieldTrack.participant.identity} className="h-full overflow-hidden rounded-xl bg-black">
-            <VideoTrack trackRef={fieldTrack} className="h-full w-full object-cover" />
-            <div className="absolute bottom-5 left-5 rounded-lg bg-[#0b1b36]/80 px-3 py-2">
-              <div className="font-semibold">{fieldTrack.participant.name || "Field officer"}</div>
-              <div className="text-xs text-[#a9bdd9]">Field officer</div>
-            </div>
+        {mainTrack ? (
+          <div
+            data-identity={mainTrack.participant.isLocal ? "local-main" : mainTrack.participant.identity}
+            className="h-full overflow-hidden bg-black"
+          >
+            <VideoTrack trackRef={mainTrack} className="h-full w-full object-cover" />
           </div>
         ) : (
-          <div className="flex h-full flex-col items-center justify-center rounded-xl text-[#9fb4d4]">
+          <div className="flex h-full flex-col items-center justify-center text-[#9fb4d4]">
             <VideoOff className="mb-3 size-8" />
-            <div className="font-medium">{waiting ? "Waiting for the admitted officer to connect" : "Camera is starting…"}</div>
+            <div className="font-medium">
+              {waitingForField ? "Waiting for the admitted officer to connect" : "Camera is starting…"}
+            </div>
           </div>
         )}
-        {selfTrack && fieldTrack && selfTrack !== fieldTrack ? (
-          <div data-identity={selfTrack.participant.identity} className="absolute right-5 top-5 h-28 w-44 overflow-hidden rounded-xl border border-white/15 bg-[#132a50]">
+        {selfTrack && remoteTrack ? (
+          <div
+            data-identity="local-pip"
+            className="absolute right-3 top-14 h-28 w-44 overflow-hidden rounded-xl border border-white/15 bg-[#132a50] shadow-lg"
+          >
             <VideoTrack trackRef={selfTrack} className="h-full w-full object-cover" />
             <span className="absolute bottom-2 left-2 text-xs font-semibold">You</span>
           </div>
         ) : null}
+        <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
+          {timerRunning ? (
+            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-[#0b1b36]/80 px-3 py-1 text-xs">
+              <span className="size-2 animate-pulse rounded-full bg-[#f7481c]" />
+              <span>REC</span>
+            </div>
+          ) : null}
+          <div className="rounded-full bg-[#0b1b36]/80 px-3 py-1 font-mono text-xs">
+            {timerRunning
+              ? formatDuration(callSeconds)
+              : room.state === ConnectionState.Connected
+                ? "Connected"
+                : room.state}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2 border-t border-white/10 bg-[#08142a] px-4 py-3">
@@ -181,19 +244,25 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
           {isCameraEnabled ? <Video /> : <VideoOff />}
           Camera
         </Button>
-        <Button variant="secondary" onClick={() => localParticipant.setScreenShareEnabled(!isScreenShareEnabled)}>
-          <MonitorUp />
-          Share
-        </Button>
-        <Button variant="secondary" onClick={capture}>
-          <Camera />
-          Capture still
+        <Button variant="secondary" onClick={() => void flipCamera()} disabled={flipping || !isCameraEnabled}>
+          <SwitchCamera />
+          {flipping ? "Switching…" : "Flip camera"}
         </Button>
         {user.role === "CreditOfficer" || user.role === "Admin" ? (
-          <Button variant="destructive" onClick={endVideoPd} disabled={ending}>
-            <PhoneOff />
-            {ending ? "Ending…" : "End PD"}
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => localParticipant.setScreenShareEnabled(!isScreenShareEnabled)}>
+              <MonitorUp />
+              Share
+            </Button>
+            <Button variant="secondary" onClick={capture}>
+              <Camera />
+              Capture still
+            </Button>
+            <Button variant="destructive" onClick={endVideoPd} disabled={ending}>
+              <PhoneOff />
+              {ending ? "Ending…" : "End PD"}
+            </Button>
+          </>
         ) : (
           <Button variant="destructive" onClick={() => room.disconnect()}>
             <PhoneOff />
@@ -210,6 +279,26 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
       />
     </div>
   );
+}
+
+function useNow() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", tick);
+    };
+  }, []);
+  return now;
 }
 
 function formatDuration(totalSeconds: number) {

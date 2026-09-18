@@ -3,6 +3,7 @@ import { Inter, Sora } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/auth-provider";
+import { NotificationProvider } from "@/components/notification-center";
 import { NotificationListener } from "@/components/notification-listener";
 import "./globals.css";
 
@@ -27,9 +28,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-background text-foreground antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">
           <AuthProvider>
-            <NotificationListener />
-            {children}
-            <Toaster />
+            <NotificationProvider>
+              <NotificationListener />
+              {children}
+              <Toaster position="top-right" offset={72} richColors />
+            </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

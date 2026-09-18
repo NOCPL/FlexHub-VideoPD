@@ -7,6 +7,7 @@ import { Clock, MessageSquare, UserRoundX, UsersRound, VideoOff } from "lucide-r
 import { toast } from "sonner";
 import { AppHeader } from "@/components/app-header";
 import { useAuth } from "@/components/auth-provider";
+import { useNotifications } from "@/components/notification-center";
 import { MeetingSession } from "@/components/meeting-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ export default function HostPage() {
   const params = useParams<{ slug: string }>();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { addChatNotice, syncWaiting } = useNotifications();
   const slug = params.slug ?? "";
   const [waiting, setWaiting] = useState<WaitingOfficer[]>([]);
   const [active, setActive] = useState<WaitingOfficer | null>(null);
@@ -80,9 +82,6 @@ export default function HostPage() {
       setWaiting((list) =>
         list.some((w) => w.id === officer.id) ? list : [...list, officer],
       );
-      toast(`${officer.displayName} is waiting`, {
-        description: `${officer.bank} · ${officer.branch} · ${officer.groupId} · ${officer.memberId}`,
-      });
     });
     connection.on("waitingLeft", (id: string) => {
       setWaiting((list) => list.filter((w) => w.id !== id));
@@ -97,6 +96,7 @@ export default function HostPage() {
       if (message.senderRole === "FieldGuest") {
         const target = message.recipientWaitingOfficerId ?? "all";
         setUnread((current) => ({ ...current, [target]: (current[target] ?? 0) + 1 }));
+        addChatNotice(`/host/${slug}`, message.senderName, message.body, message.id);
       }
     });
     connection.on("admitted", (waitingId: string) => {
@@ -150,7 +150,12 @@ export default function HostPage() {
       window.clearInterval(poll);
       void connection.stop();
     };
-  }, [user, slug]);
+  }, [user, slug, addChatNotice]);
+
+  useEffect(() => {
+    if (!slug) return;
+    syncWaiting(slug, waiting);
+  }, [slug, waiting, syncWaiting]);
 
   async function admit(id: string) {
     setAdmitting(id);
@@ -175,7 +180,7 @@ export default function HostPage() {
       await api.denyWaiting(id);
       setWaiting((list) => list.filter((w) => w.id !== id));
       if (chatTarget === id) setChatTarget("all");
-      toast.success("Field officer removed from the waiting room.");
+      toast.success("You declined this field officer.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not remove the field officer.");
     }
@@ -217,11 +222,10 @@ export default function HostPage() {
     chatTarget === "all"
       ? message.recipientWaitingOfficerId === null
       : message.recipientWaitingOfficerId === chatTarget);
-  const unreadCount = Object.values(unread).reduce((sum, count) => sum + count, 0);
 
   return (
     <div className="flex h-dvh flex-col bg-[#eef1f6]">
-      <AppHeader waitingCount={waiting.length} unreadCount={unreadCount} />
+      <AppHeader />
       <div className="flex min-h-0 flex-1 bg-[#eef1f6] p-3">
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {active ? (
@@ -232,7 +236,6 @@ export default function HostPage() {
                   {active.bank || "—"} · {active.branch || "—"} · {active.groupId || "—"} · {active.memberId || "—"}
                 </div>
               </div>
-              <CallTimer startedAt={active.connectedAt ?? active.admittedAt} />
             </div>
           ) : null}
           {session ? (
@@ -269,7 +272,7 @@ export default function HostPage() {
                   <div className="mt-2 flex gap-2">
                     <Button className="flex-1 bg-[#f7481c] hover:bg-[#d63a11]" size="sm" disabled={Boolean(active) || admitting === officer.id} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : "Admit"}</Button>
                     <Button variant="outline" size="icon-sm" title="Private message" onClick={() => { setChatTarget(officer.id); setUnread((u) => ({ ...u, [officer.id]: 0 })); }}><MessageSquare /></Button>
-                    <Button variant="outline" size="icon-sm" title="Remove" className="text-destructive" onClick={() => deny(officer.id)}><UserRoundX /></Button>
+                    <Button variant="outline" size="icon-sm" title="Decline" className="text-destructive" onClick={() => deny(officer.id)}><UserRoundX /></Button>
                   </div>
                 </div>
               ))}</div>
@@ -306,21 +309,28 @@ export default function HostPage() {
 }
 
 function WaitingTimer({ startedAt }: { startedAt: string }) {
-  const [now, setNow] = useState(0);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+  const now = useNow();
   return <span>{formatDuration(Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000)))}</span>;
 }
 
-function CallTimer({ startedAt }: { startedAt: string | null }) {
-  const [now, setNow] = useState(0);
+function useNow() {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", tick);
+    };
   }, []);
-  return <span className="font-mono text-sm text-[#29416f]">{startedAt && now ? formatDuration(Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000))) : "Connecting…"}</span>;
+  return now;
 }
 
 function formatDuration(totalSeconds: number) {
