@@ -97,6 +97,7 @@ function JoinBody() {
       setMessages((current) => current.some((m) => m.id === message.id) ? current : [...current, message]);
     });
     connection.on("admitted", (joinSession: JoinTokenResponse) => {
+      if (!isLiveKitSession(joinSession)) return;
       connectingRef.current = true;
       setGuestToken(joinSession.guestToken);
       setSession(joinSession);
@@ -175,7 +176,7 @@ function JoinBody() {
     );
   }
 
-  if (session && guest) {
+  if (session && guest && session.meeting && session.token) {
     return (
       <div className="flex h-dvh flex-col">
         <MeetingSession
@@ -331,5 +332,15 @@ function JoinBody() {
       </Card>
       </div>
     </main>
+  );
+}
+
+function isLiveKitSession(value: JoinTokenResponse | string | null | undefined): value is JoinTokenResponse {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      typeof value.token === "string" &&
+      value.token.length > 0 &&
+      value.meeting,
   );
 }

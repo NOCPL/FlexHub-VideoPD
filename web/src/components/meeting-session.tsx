@@ -30,6 +30,7 @@ type Props = {
 };
 
 export function MeetingSession(props: Props) {
+  if (!props.meeting || !props.token) return null;
   return (
     <LiveKitRoom
       token={props.token}

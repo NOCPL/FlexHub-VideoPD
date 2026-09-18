@@ -26,8 +26,12 @@ public class NotificationHub(MeetingService meetings) : Hub
         var hostSlug = Context.User?.FindFirst("hostSlug")?.Value;
         if (!string.IsNullOrEmpty(hostSlug))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"host:{hostSlug}");
             await Groups.AddToGroupAsync(Context.ConnectionId, $"lobby:{hostSlug}");
+            var role = Context.User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            if (role is Roles.CreditOfficer or Roles.Admin)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"host:{hostSlug}");
+            }
         }
 
         await base.OnConnectedAsync();
