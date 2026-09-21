@@ -48,4 +48,13 @@ public class NotificationHub(MeetingService meetings) : Hub
         }
         await Groups.AddToGroupAsync(Context.ConnectionId, $"host:{slug}");
     }
+
+    public async Task WatchWaiting()
+    {
+        var waitingId = Context.User?.GetWaitingId();
+        if (waitingId is Guid wait)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"waiting:{wait}");
+        }
+    }
 }

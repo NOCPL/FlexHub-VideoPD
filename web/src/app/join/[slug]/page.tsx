@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError, getToken, hubUrl, setGuestToken } from "@/lib/api";
-import { useFieldOfficerGeotag } from "@/hooks/use-field-officer-geotag";
+import { hasCoordinates, gpsRequiredMessage } from "@/lib/geotag";
+import { GpsRequiredError, readPhoneGps, useFieldOfficerGeotag } from "@/hooks/use-field-officer-geotag";
 import type { JoinTokenResponse, LobbyMessage, User, WaitingOfficer } from "@/lib/types";
 
 export default function JoinPage() {
@@ -45,7 +46,13 @@ function JoinBody() {
   const connectingRef = useRef(false);
   const inCallRef = useRef(false);
   const endedRef = useRef(false);
-  const { label: gpsLabel, status: gpsStatus } = useFieldOfficerGeotag(waiting?.id ?? null);
+  const { label: gpsLabel, status: gpsStatus, geotag } = useFieldOfficerGeotag(waiting?.id ?? null);
+  const gpsReady = hasCoordinates(geotag) || hasCoordinates(waiting);
+  const gpsReadyRef = useRef(false);
+  const geoErrorRef = useRef<string | null>(null);
+  const toastedChatRef = useRef(new Set<string>());
+  gpsReadyRef.current = gpsReady;
+  geoErrorRef.current = geotag?.geoError ?? waiting?.geoError ?? null;
 
   useEffect(() => {
     connectingRef.current = false;
@@ -65,10 +72,29 @@ function JoinBody() {
     setBusy(true);
     setError(null);
     try {
+      const fix = await readPhoneGps();
       const result = await api.join({ slug, bank, branch, groupId, memberId, displayName: name });
       setGuestToken(result.guestToken);
       setCreditOfficerName(result.creditOfficerName);
-      setWaiting(result.waiting);
+      try {
+        const saved = await api.reportGeotag(result.waiting.id, {
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          accuracyMeters: fix.accuracyMeters,
+          capturedAt: fix.geoCapturedAt,
+          error: null,
+        });
+        setWaiting(saved);
+      } catch {
+        setWaiting({
+          ...result.waiting,
+          latitude: fix.latitude,
+          longitude: fix.longitude,
+          accuracyMeters: fix.accuracyMeters,
+          geoCapturedAt: fix.geoCapturedAt,
+          geoError: null,
+        });
+      }
       setGuest({
         id: result.waiting.id,
         name,
@@ -76,7 +102,14 @@ function JoinBody() {
         role: "FieldGuest",
       });
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Join failed.";
+      const message =
+        err instanceof GpsRequiredError
+          ? err.message
+          : err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Join failed.";
       setError(message);
       toast.error(message);
     } finally {
@@ -103,9 +136,20 @@ function JoinBody() {
 
     connection.on("lobbyChat", (message: LobbyMessage) => {
       setMessages((current) => current.some((m) => m.id === message.id) ? current : [...current, message]);
+      if (message.recipientWaitingOfficerId) setChatTarget("private");
+      notifyIncomingChat(message, toastedChatRef.current);
+    });
+    connection.on("chatNotify", (message: LobbyMessage) => {
+      setMessages((current) => current.some((m) => m.id === message.id) ? current : [...current, message]);
+      setChatTarget("private");
+      notifyIncomingChat(message, toastedChatRef.current);
     });
     connection.on("admitted", (joinSession: JoinTokenResponse) => {
       if (!isLiveKitSession(joinSession)) return;
+      if (!gpsReadyRef.current) {
+        toast.error(gpsRequiredMessage(geoErrorRef.current));
+        return;
+      }
       connectingRef.current = true;
       inCallRef.current = true;
       setGuestToken(joinSession.guestToken);
@@ -121,16 +165,24 @@ function JoinBody() {
       inCallRef.current = false;
       setCallEnded(true);
       setSession(null);
-      setGuestToken(null);
     });
 
     const connect = window.setTimeout(() => {
       if (cancelled) return;
-      connection.start().catch((err: Error) => {
+      connection
+        .start()
+        .then(() => {
+          if (cancelled) return;
+          return connection.invoke("WatchWaiting");
+        })
+        .catch((err: Error) => {
         if (cancelled) return;
         if ((err?.message ?? "").includes("stopped during negotiation")) return;
       });
     }, 50);
+    connection.onreconnected(() => {
+      void connection.invoke("WatchWaiting");
+    });
 
     const poll = window.setInterval(() => {
       api
@@ -143,19 +195,25 @@ function JoinBody() {
             setGuestToken(null);
             setSession(null);
           }
-          if (latest.waiting.status === "Left" && inCallRef.current) {
+          if (latest.waiting.status === "Left") {
             endedRef.current = true;
             setCallEnded(true);
             setSession(null);
-            setGuestToken(null);
             inCallRef.current = false;
           }
           if (latest.waiting.status === "Admitted" && !cancelled && !connectingRef.current) {
+            if (!gpsReadyRef.current) return;
             connectingRef.current = true;
             inCallRef.current = true;
-            const joinSession = await api.waitingConnect(waiting.id);
-            setGuestToken(joinSession.guestToken);
-            setSession(joinSession);
+            try {
+              const joinSession = await api.waitingConnect(waiting.id);
+              setGuestToken(joinSession.guestToken);
+              setSession(joinSession);
+            } catch (err) {
+              connectingRef.current = false;
+              inCallRef.current = false;
+              toast.error(err instanceof Error ? err.message : gpsRequiredMessage());
+            }
           }
         })
         .catch(() => undefined);
@@ -184,6 +242,30 @@ function JoinBody() {
       setMessages((current) => current.some((m) => m.id === saved.id) ? current : [...current, saved]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chat could not be sent.");
+    }
+  }
+
+  async function retryGps() {
+    if (!waiting) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const fix = await readPhoneGps();
+      const saved = await api.reportGeotag(waiting.id, {
+        latitude: fix.latitude,
+        longitude: fix.longitude,
+        accuracyMeters: fix.accuracyMeters,
+        capturedAt: fix.geoCapturedAt,
+        error: null,
+      });
+      setWaiting(saved);
+      toast.success("Location is on. You can be admitted to the call.");
+    } catch (err) {
+      const message = err instanceof GpsRequiredError ? err.message : gpsRequiredMessage();
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -226,11 +308,15 @@ function JoinBody() {
           meeting={session.meeting}
           user={guest}
           gpsLabel={gpsLabel}
-          onLeave={() => {
-            setGuestToken(null);
-            setSession(null);
+          onLeave={(reason) => {
             inCallRef.current = false;
-            if (endedRef.current) return;
+            setSession(null);
+            if (reason === "ended" || endedRef.current) {
+              endedRef.current = true;
+              setCallEnded(true);
+              return;
+            }
+            setGuestToken(null);
             setWaiting(null);
             router.push(
               `/join/${slug}?bank=${encodeURIComponent(bank)}&branch=${encodeURIComponent(branch)}&groupId=${encodeURIComponent(groupId)}&memberId=${encodeURIComponent(memberId)}`,
@@ -326,9 +412,17 @@ function JoinBody() {
             <p>Branch: {waiting.branch || branch || "—"}</p>
             <p>Group: {waiting.groupId || groupId || "—"}</p>
             <p>Member: {waiting.memberId || memberId || "—"}</p>
-            <p className={gpsStatus === "error" ? "text-destructive" : ""}>
+            <p className={gpsReady ? "" : "text-destructive"}>
               GPS: {gpsStatus === "locating" ? "Allow location on this phone…" : gpsLabel}
             </p>
+            {!gpsReady ? (
+              <>
+                <p className="text-destructive text-sm">{error ?? gpsRequiredMessage(geoErrorRef.current)}</p>
+                <Button className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy} onClick={() => void retryGps()}>
+                  {busy ? "Checking location…" : "Allow location and try again"}
+                </Button>
+              </>
+            ) : null}
             <Button variant="outline" className="mt-2 w-full" onClick={leaveWait}>
               Leave queue
             </Button>
@@ -346,8 +440,8 @@ function JoinBody() {
         <CardHeader>
           <CardTitle className="text-[#10264e]">Join Video PD</CardTitle>
           <CardDescription className="text-[#5a6a84]">
-            You will wait until the credit officer admits you. This phone’s GPS and time are attached to
-            captured stills. Bank, branch, group, and member IDs are stored as-is. They are not validated here.
+            You will wait until the credit officer admits you. This phone must share GPS first — the call
+            will not start if you block location. Bank, branch, group, and member IDs are stored as-is.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -375,13 +469,29 @@ function JoinBody() {
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
           <Button className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy} onClick={join}>
-            {busy ? "Joining queue…" : "Wait for the credit officer"}
+            {busy ? "Allow location on this phone…" : "Allow location and wait"}
           </Button>
         </CardContent>
       </Card>
       </div>
     </main>
   );
+}
+
+function notifyIncomingChat(message: LobbyMessage, seen: Set<string>) {
+  if (message.senderRole === "FieldGuest") return;
+  if (!message.recipientWaitingOfficerId) return;
+  if (seen.has(message.id)) return;
+  seen.add(message.id);
+  try {
+    navigator.vibrate?.([120, 80, 120]);
+  } catch {
+    /* ignore */
+  }
+  toast(message.senderName || "Credit officer", {
+    description: message.body,
+    duration: 10_000,
+  });
 }
 
 function isLiveKitSession(value: JoinTokenResponse | string | null | undefined): value is JoinTokenResponse {

@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
       { source: "/hubs/:path*", destination: `${api}/hubs/:path*` },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: "/join/:path*",
+        headers: [{ key: "Permissions-Policy", value: "geolocation=(self)" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -403,6 +403,7 @@ public class MeetingService(
                 waiting.CallDurationSeconds ?? 0);
         }
         await notifications.MeetingEndedAsync(meeting);
+        await liveKit.DeleteRoomAsync(meeting.LiveKitRoomName);
     }
 
     public async Task HandleWebhookAsync(string eventName, string roomName, string? identity, string? egressId, int? durationSeconds, string? filePath)

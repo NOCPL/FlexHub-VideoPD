@@ -206,6 +206,7 @@ public class LobbyService(
         {
             throw new InvalidOperationException("Finish the active Video PD before admitting another field officer.");
         }
+        EnsureFieldGps(waiting);
 
         var meeting = await meetings.EnsureDeskAsync(officer);
         await meetings.StampJoinParamsAsync(
@@ -261,6 +262,7 @@ public class LobbyService(
         {
             throw new InvalidOperationException("The credit officer has not admitted you yet.");
         }
+        EnsureFieldGps(waiting);
         var meeting = await meetings.LoadAsync(waiting.MeetingId.Value);
         var identity = $"fo-{waiting.Id:N}";
         var livekit = liveKit.CreateParticipantToken(
@@ -283,6 +285,15 @@ public class LobbyService(
             waiting.HostSlug,
             meeting.Id);
         return new JoinTokenResponse(livekit, guestToken, liveKit.WsUrl, identity, meetings.Mapper.ToDetail(meeting));
+    }
+
+    private static void EnsureFieldGps(WaitingOfficer waiting)
+    {
+        if (waiting.Latitude is null || waiting.Longitude is null)
+        {
+            throw new InvalidOperationException(
+                "The field officer must allow GPS on their phone before the call can start.");
+        }
     }
 
     public async Task<WaitingOfficerDto> ReportGeotagAsync(WaitingOfficer waiting, GeotagReportRequest request)

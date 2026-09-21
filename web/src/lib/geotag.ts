@@ -12,6 +12,23 @@ export function hasCoordinates(
   return geotag?.latitude != null && geotag?.longitude != null;
 }
 
+export function gpsRequiredMessage(code?: string | null) {
+  switch (code) {
+    case "PERMISSION_DENIED":
+      return "Location is required. Tap Allow when this page asks. If you already blocked it, open this site’s settings on your phone, set Location to Allow, then tap Try again. The call cannot start without GPS.";
+    case "POSITION_UNAVAILABLE":
+      return "Turn on GPS on this phone, then tap Try again. The call cannot start without GPS.";
+    case "TIMEOUT":
+      return "Could not get a GPS fix. Keep location on, then tap Try again. The call cannot start without GPS.";
+    case "UNSUPPORTED":
+      return "This browser cannot share location. Open the join link in Chrome or Safari.";
+    case "INSECURE":
+      return "Open this join link over HTTPS so the phone can share GPS.";
+    default:
+      return "Allow location on this phone to continue. The call cannot start without GPS.";
+  }
+}
+
 export function geoErrorLabel(code: string | null | undefined) {
   switch (code) {
     case "PERMISSION_DENIED":

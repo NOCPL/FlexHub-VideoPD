@@ -75,9 +75,15 @@ public class NotificationService(IHubContext<NotificationHub> hub)
         {
             hub.Clients.Group($"host:{slug}").SendAsync("lobbyChat", message)
         };
-        sends.Add(recipientWaitingId is Guid recipient
-            ? hub.Clients.Group($"waiting:{recipient}").SendAsync("lobbyChat", message)
-            : hub.Clients.Group($"lobby:{slug}").SendAsync("lobbyChat", message));
+        if (recipientWaitingId is Guid recipient)
+        {
+            sends.Add(hub.Clients.Group($"waiting:{recipient}").SendAsync("lobbyChat", message));
+            sends.Add(hub.Clients.Group($"waiting:{recipient}").SendAsync("chatNotify", message));
+        }
+        else
+        {
+            sends.Add(hub.Clients.Group($"lobby:{slug}").SendAsync("lobbyChat", message));
+        }
         return Task.WhenAll(sends);
     }
 

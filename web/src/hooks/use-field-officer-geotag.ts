@@ -2,15 +2,52 @@
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import { geoErrorLabel, geotagSummary, type FieldGeotag } from "@/lib/geotag";
+import { geoErrorLabel, geotagSummary, gpsRequiredMessage, type FieldGeotag } from "@/lib/geotag";
 
 type Status = "idle" | "locating" | "ready" | "error";
+
+const GPS_OPTIONS: PositionOptions = {
+  enableHighAccuracy: true,
+  timeout: 25_000,
+  maximumAge: 0,
+};
+
+export class GpsRequiredError extends Error {
+  constructor(public code: string) {
+    super(gpsRequiredMessage(code));
+    this.name = "GpsRequiredError";
+  }
+}
 
 function codeFromPositionError(err: GeolocationPositionError | null) {
   if (!err) return "POSITION_UNAVAILABLE";
   if (err.code === err.PERMISSION_DENIED) return "PERMISSION_DENIED";
   if (err.code === err.TIMEOUT) return "TIMEOUT";
   return "POSITION_UNAVAILABLE";
+}
+
+export function readPhoneGps(): Promise<FieldGeotag> {
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    return Promise.reject(new GpsRequiredError("INSECURE"));
+  }
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return Promise.reject(new GpsRequiredError("UNSUPPORTED"));
+  }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracyMeters: position.coords.accuracy,
+          geoCapturedAt: new Date(position.timestamp).toISOString(),
+          geoError: null,
+        });
+      },
+      (err) => reject(new GpsRequiredError(codeFromPositionError(err))),
+      GPS_OPTIONS,
+    );
+  });
 }
 
 function movedMeters(from: FieldGeotag | null, lat: number, lng: number) {
@@ -91,11 +128,7 @@ export function useFieldOfficerGeotag(waitingId: string | null) {
     }
 
     setStatus("locating");
-    const options: PositionOptions = {
-      enableHighAccuracy: true,
-      timeout: 20_000,
-      maximumAge: 10_000,
-    };
+    const options: PositionOptions = GPS_OPTIONS;
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -154,7 +187,7 @@ export function useFieldOfficerGeotag(waitingId: string | null) {
         ? geotagSummary(geotag)
         : status === "error"
           ? geoErrorLabel(geotag?.geoError)
-          : "GPS starts after you join the queue";
+          : "Allow location on this phone to continue";
 
   return { status, geotag, label };
 }

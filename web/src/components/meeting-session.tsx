@@ -32,6 +32,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { decodeCallSignal, encodeCallSignal } from "@/lib/call-signal";
 import { captureVideoFrame } from "@/lib/crop";
 import type { MeetingDetail, User, WaitingOfficer } from "@/lib/types";
 import { SnapshotCropDialog } from "@/components/snapshot-crop-dialog";
@@ -43,7 +44,7 @@ type Props = {
   user: User;
   fieldOfficer?: WaitingOfficer | null;
   gpsLabel?: string | null;
-  onLeave: () => void;
+  onLeave: (reason?: "ended" | "self") => void;
 };
 
 export function MeetingSession(props: Props) {
@@ -56,7 +57,6 @@ export function MeetingSession(props: Props) {
       audio
       video
       className="flex min-h-0 flex-1 flex-col"
-      onDisconnected={props.onLeave}
       onError={(err) => toast.error(err.message)}
     >
       <RoomAudioRenderer />
@@ -74,14 +74,17 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
   const [ending, setEnding] = useState(false);
   const [flipping, setFlipping] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const hostEndedRef = useRef(false);
+  const leftRef = useRef(false);
   const now = useNow();
   const stageRef = useRef<HTMLDivElement>(null);
+  const isHost = user.role === "CreditOfficer" || user.role === "Admin";
 
   const remoteOfficerPresent = participants.some(
     (p) => !p.isLocal && p.identity.startsWith("fo-"),
   );
   const waitingForField =
-    (user.role === "CreditOfficer" || user.role === "Admin") && !remoteOfficerPresent;
+    isHost && !remoteOfficerPresent;
   const timerRunning =
     user.role === "FieldGuest"
       ? room.state === ConnectionState.Connected
@@ -98,11 +101,30 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
     const onMedia = () => {
       setMediaError("Camera or microphone was blocked. Allow access in the browser and refresh.");
     };
+    const onData = (payload: Uint8Array) => {
+      const signal = decodeCallSignal(payload);
+      if (!signal) return;
+      if (signal.type === "flipCamera" && user.role === "FieldGuest") {
+        void flipLocalCamera();
+      }
+      if (signal.type === "meetingEnded") {
+        noteHostEnded();
+      }
+    };
+    const onDisconnected = () => {
+      if (leftRef.current) return;
+      leftRef.current = true;
+      onLeave(hostEndedRef.current ? "ended" : "self");
+    };
     room.on(RoomEvent.MediaDevicesError, onMedia);
+    room.on(RoomEvent.DataReceived, onData);
+    room.on(RoomEvent.Disconnected, onDisconnected);
     return () => {
       room.off(RoomEvent.MediaDevicesError, onMedia);
+      room.off(RoomEvent.DataReceived, onData);
+      room.off(RoomEvent.Disconnected, onDisconnected);
     };
-  }, [room]);
+  }, [room, user.role, onLeave]);
 
   const tracks = useTracks(
     [
@@ -134,7 +156,7 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
     }
   }
 
-  async function flipCamera() {
+  async function flipLocalCamera() {
     setFlipping(true);
     try {
       const publication = localParticipant.getTrackPublication(Track.Source.Camera);
@@ -171,12 +193,60 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
     }
   }
 
+  async function flipCamera() {
+    if (isHost) {
+      if (!remoteOfficerPresent) {
+        toast.error("Admit the field officer before flipping their phone camera.");
+        return;
+      }
+      try {
+        const foIdentity = participants.find((p) => !p.isLocal && p.identity.startsWith("fo-"))?.identity;
+        await localParticipant.publishData(encodeCallSignal({ type: "flipCamera" }), {
+          reliable: true,
+          destinationIdentities: foIdentity ? [foIdentity] : undefined,
+        });
+        toast.success("Flipping the field officer’s phone camera.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Could not flip the phone camera.");
+      }
+      return;
+    }
+    await flipLocalCamera();
+  }
+
+  function noteHostEnded() {
+    if (hostEndedRef.current) return;
+    hostEndedRef.current = true;
+    if (!leftRef.current) {
+      leftRef.current = true;
+      onLeave("ended");
+    }
+    try {
+      room.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function endVideoPd() {
     setEnding(true);
     try {
+      try {
+        const foIdentity = participants.find((p) => !p.isLocal && p.identity.startsWith("fo-"))?.identity;
+        await localParticipant.publishData(encodeCallSignal({ type: "meetingEnded" }), {
+          reliable: true,
+          destinationIdentities: foIdentity ? [foIdentity] : undefined,
+        });
+      } catch {
+        /* SignalR / room delete still end the field officer */
+      }
       await api.endMeeting(meeting.id);
+      hostEndedRef.current = true;
       room.disconnect();
-      onLeave();
+      if (!leftRef.current) {
+        leftRef.current = true;
+        onLeave("ended");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not end Video PD.");
       setEnding(false);
@@ -251,11 +321,11 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
           {isCameraEnabled ? <Video /> : <VideoOff />}
           Camera
         </Button>
-        <Button variant="secondary" onClick={() => void flipCamera()} disabled={flipping || !isCameraEnabled}>
+        <Button variant="secondary" onClick={() => void flipCamera()} disabled={flipping || (isHost ? !remoteOfficerPresent : !isCameraEnabled)}>
           <SwitchCamera />
           {flipping ? "Switching…" : "Flip camera"}
         </Button>
-        {user.role === "CreditOfficer" || user.role === "Admin" ? (
+        {isHost ? (
           <>
             <Button variant="secondary" onClick={() => localParticipant.setScreenShareEnabled(!isScreenShareEnabled)}>
               <MonitorUp />

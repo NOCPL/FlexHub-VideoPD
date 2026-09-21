@@ -106,6 +106,23 @@ public class LiveKitService(IConfiguration config, ILogger<LiveKitService> logge
         }
     }
 
+    public async Task DeleteRoomAsync(string roomName)
+    {
+        var httpUrl = config["LiveKit:HttpUrl"] ?? "http://127.0.0.1:7880";
+        try
+        {
+            var client = new RoomServiceClient(
+                httpUrl,
+                config["LiveKit:ApiKey"],
+                config["LiveKit:ApiSecret"]);
+            await client.DeleteRoom(new DeleteRoomRequest { Room = roomName });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to delete LiveKit room {Room}", roomName);
+        }
+    }
+
     public WebhookEvent ParseWebhook(string body, string authorization)
     {
         var receiver = new WebhookReceiver(config["LiveKit:ApiKey"], config["LiveKit:ApiSecret"]);

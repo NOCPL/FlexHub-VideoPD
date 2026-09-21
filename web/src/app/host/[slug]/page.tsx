@@ -256,7 +256,15 @@ export default function HostPage() {
               <div className="mb-4 flex size-16 items-center justify-center rounded-xl bg-[#709ac5]/15 text-[#9fb4d4]"><VideoOff /></div>
               <p className="text-xl font-semibold">No one in the call yet</p>
               <p className="mt-2 max-w-sm text-sm text-[#9fb4d4]">Admit a field officer from the waiting room on the right. Their video fills this screen.</p>
-              {waiting[0] ? <Button className="mt-5 bg-[#f7481c] hover:bg-[#d63a11]" onClick={() => admit(waiting[0].id)}>Admit next officer</Button> : null}
+              {waiting[0] ? (
+                <Button
+                  className="mt-5 bg-[#f7481c] hover:bg-[#d63a11]"
+                  disabled={!hasCoordinates(waiting[0])}
+                  onClick={() => admit(waiting[0].id)}
+                >
+                  {hasCoordinates(waiting[0]) ? "Admit next officer" : "Waiting for GPS"}
+                </Button>
+              ) : null}
             </div>
           )}
         </main>
@@ -273,12 +281,14 @@ export default function HostPage() {
                 <div key={officer.id} className="border-b p-3 last:border-b-0">
                   <div className="font-semibold text-[#10264e]">{officer.displayName}</div>
                   <div className="text-xs text-[#5a6a84]">{officer.bank || "—"} · {officer.branch || "—"} · {officer.groupId || "—"} · {officer.memberId || "—"}</div>
-                  <div className={`mt-1 text-xs ${hasCoordinates(officer) ? "text-[#29416f]" : "text-[#5a6a84]"}`}>
-                    {geotagSummary(officer)}
+                  <div className={`mt-1 text-xs ${hasCoordinates(officer) ? "text-[#29416f]" : "text-[#c2380f]"}`}>
+                    {hasCoordinates(officer)
+                      ? geotagSummary(officer)
+                      : "Waiting for GPS. Admit is blocked until they allow location."}
                   </div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-[#5a6a84]"><Clock className="size-3" /> Waiting <WaitingTimer startedAt={officer.createdAt} /></div>
                   <div className="mt-2 flex gap-2">
-                    <Button className="flex-1 bg-[#f7481c] hover:bg-[#d63a11]" size="sm" disabled={Boolean(active) || admitting === officer.id} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : "Admit"}</Button>
+                    <Button className="flex-1 bg-[#f7481c] hover:bg-[#d63a11]" size="sm" disabled={Boolean(active) || admitting === officer.id || !hasCoordinates(officer)} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : hasCoordinates(officer) ? "Admit" : "Waiting for GPS"}</Button>
                     <Button variant="outline" size="icon-sm" title="Private message" onClick={() => { setChatTarget(officer.id); setUnread((u) => ({ ...u, [officer.id]: 0 })); }}><MessageSquare /></Button>
                     <Button variant="outline" size="icon-sm" title="Decline" className="text-destructive" onClick={() => deny(officer.id)}><UserRoundX /></Button>
                   </div>
