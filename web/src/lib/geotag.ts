@@ -46,10 +46,21 @@ export function geoErrorLabel(code: string | null | undefined) {
   }
 }
 
-export function formatUtc(value: string | Date | null | undefined) {
+export function formatKolkata(value: string | Date | null | undefined) {
   const date = value ? new Date(value) : new Date();
   if (Number.isNaN(date.getTime())) return "time unknown";
-  return date.toISOString().replace("T", " ").replace(/\.\d{3}Z$/, " UTC");
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}:${get("second")} IST`;
 }
 
 export function geotagOverlayLines(geotag: FieldGeotag | null | undefined) {
@@ -58,17 +69,17 @@ export function geotagOverlayLines(geotag: FieldGeotag | null | undefined) {
       geotag.accuracyMeters != null ? `±${Math.round(geotag.accuracyMeters)} m` : "accuracy unknown";
     return [
       `${geotag.latitude!.toFixed(6)}, ${geotag.longitude!.toFixed(6)}`,
-      `${accuracy} · ${formatUtc(geotag.geoCapturedAt)} · Field officer GPS`,
+      `${accuracy} · ${formatKolkata(geotag.geoCapturedAt)}`,
     ];
   }
-  return [geoErrorLabel(geotag?.geoError), formatUtc(geotag?.geoCapturedAt ?? new Date().toISOString())];
+  return [geoErrorLabel(geotag?.geoError), formatKolkata(geotag?.geoCapturedAt ?? new Date().toISOString())];
 }
 
 export function geotagSummary(geotag: FieldGeotag | null | undefined) {
   if (hasCoordinates(geotag)) {
     const accuracy =
       geotag.accuracyMeters != null ? ` ±${Math.round(geotag.accuracyMeters)} m` : "";
-    return `${geotag.latitude!.toFixed(5)}, ${geotag.longitude!.toFixed(5)}${accuracy} · ${formatUtc(geotag.geoCapturedAt)}`;
+    return `${geotag.latitude!.toFixed(5)}, ${geotag.longitude!.toFixed(5)}${accuracy} · ${formatKolkata(geotag.geoCapturedAt)}`;
   }
   return geoErrorLabel(geotag?.geoError);
 }

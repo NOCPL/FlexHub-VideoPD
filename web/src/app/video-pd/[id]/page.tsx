@@ -9,7 +9,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/lib/api";
-import { formatUtc, geotagSummary, mapsUrl } from "@/lib/geotag";
+import { formatKolkata, geotagSummary, mapsUrl } from "@/lib/geotag";
 import type { MeetingDetail } from "@/lib/types";
 import { STATUS_LABEL } from "@/lib/types";
 
@@ -94,7 +94,7 @@ export default function VideoPdDetailPage() {
               <CardContent>
                 {pd.snapshots.length === 0 ? (
                   <p className="text-sm text-[#5a6a84]">
-                    No stills yet. During the call, tap Capture still. The saved crop shows the field officer’s coordinates and UTC time.
+                    No stills yet. During the call, tap Capture still. The saved crop shows the field officer’s coordinates and Kolkata time.
                   </p>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -103,14 +103,14 @@ export default function VideoPdDetailPage() {
                       return (
                         <figure key={still.id} className="overflow-hidden rounded-lg border border-[#d7deea]">
                           <div className="aspect-[3/4] bg-[#0b1b36]">
-                            <AuthImage src={still.url} alt={`Still captured ${formatUtc(still.createdAt)}`} className="h-full w-full object-cover" />
+                            <AuthImage src={still.url} alt={`Still captured ${formatKolkata(still.createdAt)}`} className="h-full w-full object-cover" />
                           </div>
                           <figcaption className="space-y-1 p-3 text-sm">
                             <div className="font-medium text-[#10264e]">{geotagSummary(still)}</div>
                             <div className="text-xs text-[#5a6a84]">
                               {still.bank} · {still.branch} · {still.groupId} · {still.memberId}
                             </div>
-                            <div className="text-xs text-[#5a6a84]">Saved {formatUtc(still.createdAt)}</div>
+                            <div className="text-xs text-[#5a6a84]">Saved {formatKolkata(still.createdAt)}</div>
                             {map ? (
                               <a href={map} target="_blank" rel="noreferrer" className="text-xs text-[#29416f] underline">
                                 Open in Maps
