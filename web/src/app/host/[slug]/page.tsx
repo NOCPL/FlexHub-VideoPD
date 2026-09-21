@@ -12,6 +12,7 @@ import { MeetingSession } from "@/components/meeting-session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, ApiError, getAuthToken, hubUrl, setGuestToken } from "@/lib/api";
+import { geotagSummary, hasCoordinates } from "@/lib/geotag";
 import type { JoinTokenResponse, LobbyMessage, WaitingOfficer } from "@/lib/types";
 
 export default function HostPage() {
@@ -116,6 +117,10 @@ export default function HostPage() {
         current?.id === waitingId ? { ...current, status: "Connected", connectedAt } : current,
       );
     });
+    connection.on("geotagUpdated", (officer: WaitingOfficer) => {
+      setWaiting((list) => list.map((item) => (item.id === officer.id ? { ...item, ...officer } : item)));
+      setActive((current) => (current?.id === officer.id ? { ...current, ...officer } : current));
+    });
 
     const connect = window.setTimeout(() => {
       if (cancelled) return;
@@ -132,14 +137,10 @@ export default function HostPage() {
 
     const poll = window.setInterval(() => {
       api
-        .hostWaiting(slug)
-        .then((list) => {
-          setWaiting((prev) =>
-            list.map((item) => {
-              const existing = prev.find((w) => w.id === item.id);
-              return existing ?? item;
-            }),
-          );
+        .hostCurrent(slug)
+        .then((lobby) => {
+          setWaiting(lobby.waiting ?? []);
+          if (lobby.active) setActive(lobby.active);
         })
         .catch(() => undefined);
     }, 4000);
@@ -235,6 +236,9 @@ export default function HostPage() {
                 <div className="truncate text-sm text-[#5a6a84]">
                   {active.bank || "—"} · {active.branch || "—"} · {active.groupId || "—"} · {active.memberId || "—"}
                 </div>
+                <div className={`truncate text-xs ${hasCoordinates(active) ? "text-[#29416f]" : "text-[#c2380f]"}`}>
+                  {geotagSummary(active)}
+                </div>
               </div>
             </div>
           ) : null}
@@ -244,6 +248,7 @@ export default function HostPage() {
               serverUrl={session.liveKitUrl}
               meeting={session.meeting}
               user={user}
+              fieldOfficer={active}
               onLeave={() => setSession(null)}
             />
           ) : (
@@ -268,6 +273,9 @@ export default function HostPage() {
                 <div key={officer.id} className="border-b p-3 last:border-b-0">
                   <div className="font-semibold text-[#10264e]">{officer.displayName}</div>
                   <div className="text-xs text-[#5a6a84]">{officer.bank || "—"} · {officer.branch || "—"} · {officer.groupId || "—"} · {officer.memberId || "—"}</div>
+                  <div className={`mt-1 text-xs ${hasCoordinates(officer) ? "text-[#29416f]" : "text-[#5a6a84]"}`}>
+                    {geotagSummary(officer)}
+                  </div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-[#5a6a84]"><Clock className="size-3" /> Waiting <WaitingTimer startedAt={officer.createdAt} /></div>
                   <div className="mt-2 flex gap-2">
                     <Button className="flex-1 bg-[#f7481c] hover:bg-[#d63a11]" size="sm" disabled={Boolean(active) || admitting === officer.id} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : "Admit"}</Button>

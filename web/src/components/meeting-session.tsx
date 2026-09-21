@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { captureVideoFrame } from "@/lib/crop";
-import type { MeetingDetail, User } from "@/lib/types";
+import type { MeetingDetail, User, WaitingOfficer } from "@/lib/types";
 import { SnapshotCropDialog } from "@/components/snapshot-crop-dialog";
 
 type Props = {
@@ -41,6 +41,8 @@ type Props = {
   serverUrl: string;
   meeting: MeetingDetail;
   user: User;
+  fieldOfficer?: WaitingOfficer | null;
+  gpsLabel?: string | null;
   onLeave: () => void;
 };
 
@@ -63,7 +65,7 @@ export function MeetingSession(props: Props) {
   );
 }
 
-function MeetingBody({ meeting, user, onLeave }: Props) {
+function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) {
   const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
@@ -232,6 +234,11 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
                 ? "Connected"
                 : room.state}
           </div>
+          {user.role === "FieldGuest" && gpsLabel ? (
+            <div className="max-w-[min(100%,18rem)] truncate rounded-full bg-[#0b1b36]/80 px-3 py-1 text-xs">
+              {gpsLabel}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -273,9 +280,11 @@ function MeetingBody({ meeting, user, onLeave }: Props) {
 
       <SnapshotCropDialog
         meetingId={meeting.id}
+        fieldOfficerId={fieldOfficer?.id}
+        geotag={fieldOfficer}
         imageSrc={captureSrc}
         onClose={() => setCaptureSrc(null)}
-        onSaved={() => toast.success("Cropped still saved to this Video PD.")}
+        onSaved={() => toast.success("Cropped still saved with the field officer’s GPS and time.")}
       />
     </div>
   );

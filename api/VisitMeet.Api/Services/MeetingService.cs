@@ -70,7 +70,8 @@ public class MeetingMapper(IConfiguration config)
             m.Snapshots.OrderByDescending(s => s.CreatedAt).Select(s => new SnapshotDto(
                 s.Id, s.Bank, s.Branch, s.GroupId, s.MemberId,
                 $"/api/meetings/{m.Id}/snapshots/{s.Id}/file",
-                s.CropX, s.CropY, s.CropWidth, s.CropHeight, s.CreatedAt)).ToList(),
+                s.CropX, s.CropY, s.CropWidth, s.CropHeight, s.CreatedAt,
+                s.Latitude, s.Longitude, s.AccuracyMeters, s.GeoCapturedAt, s.GeoError)).ToList(),
             m.ChatMessages.OrderBy(c => c.SentAt).Select(c => new ChatMessageDto(
                 c.Id, c.SenderUserId, c.SenderName, c.SenderRole, c.Body, c.SentAt)).ToList());
     }
@@ -478,6 +479,14 @@ public class MeetingService(
             await file.CopyToAsync(stream);
         }
 
+        var fieldOfficer = (await db.WaitingOfficers
+            .Where(w =>
+                w.MeetingId == meeting.Id &&
+                (w.Status == WaitingStatuses.Admitted || w.Status == WaitingStatuses.Connected))
+            .ToListAsync())
+            .OrderByDescending(w => w.ConnectedAt ?? w.AdmittedAt)
+            .FirstOrDefault();
+
         var snapshot = new Snapshot
         {
             Id = snapshotId,
@@ -493,7 +502,12 @@ public class MeetingService(
             CropWidth = cropW,
             CropHeight = cropH,
             CreatedAt = DateTimeOffset.UtcNow,
-            CapturedByUserId = capturedBy
+            CapturedByUserId = capturedBy,
+            Latitude = fieldOfficer?.Latitude,
+            Longitude = fieldOfficer?.Longitude,
+            AccuracyMeters = fieldOfficer?.AccuracyMeters,
+            GeoCapturedAt = fieldOfficer?.GeoCapturedAt,
+            GeoError = fieldOfficer?.GeoError
         };
         db.Snapshots.Add(snapshot);
         await db.SaveChangesAsync();

@@ -79,6 +79,26 @@ public class WaitingController(LobbyService lobby) : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id:guid}/geotag")]
+    public async Task<ActionResult<WaitingOfficerDto>> Geotag(Guid id, GeotagReportRequest request)
+    {
+        var waiting = await lobby.LoadWaitingAsync(id);
+        if (waiting is null) return NotFound();
+        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        if (role != Roles.FieldGuest || User.GetWaitingId() != waiting.Id)
+        {
+            return Forbid();
+        }
+        try
+        {
+            return await lobby.ReportGeotagAsync(waiting, request);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{id:guid}/connect")]
     public async Task<ActionResult<JoinTokenResponse>> Connect(Guid id)
     {

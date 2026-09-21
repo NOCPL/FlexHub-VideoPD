@@ -25,6 +25,12 @@ public record JoinMeetingRequest(
 
 public record ChatPostRequest(string Body);
 public record LobbyChatRequest(string Body, Guid? RecipientWaitingOfficerId);
+public record GeotagReportRequest(
+    double? Latitude,
+    double? Longitude,
+    double? AccuracyMeters,
+    DateTimeOffset? CapturedAt,
+    string? Error);
 public record CreateCreditOfficerRequest(string Name, string Email, string TemporaryPassword);
 
 public record MeetingListItemDto(
@@ -72,7 +78,12 @@ public record SnapshotDto(
     int? CropY,
     int? CropWidth,
     int? CropHeight,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    double? Latitude,
+    double? Longitude,
+    double? AccuracyMeters,
+    DateTimeOffset? GeoCapturedAt,
+    string? GeoError);
 
 public record ChatMessageDto(
     Guid Id,
@@ -131,7 +142,12 @@ public record WaitingOfficerDto(
     DateTimeOffset? AdmittedAt,
     DateTimeOffset? ConnectedAt,
     DateTimeOffset? LeftAt,
-    int? CallDurationSeconds);
+    int? CallDurationSeconds,
+    double? Latitude,
+    double? Longitude,
+    double? AccuracyMeters,
+    DateTimeOffset? GeoCapturedAt,
+    string? GeoError);
 
 public record WaitingRoomDto(
     WaitingOfficerDto Waiting,

@@ -62,6 +62,11 @@ export type Snapshot = {
   cropWidth: number | null;
   cropHeight: number | null;
   createdAt: string;
+  latitude: number | null;
+  longitude: number | null;
+  accuracyMeters: number | null;
+  geoCapturedAt: string | null;
+  geoError: string | null;
 };
 
 export type ChatMessage = {
@@ -116,6 +121,11 @@ export type WaitingOfficer = {
   connectedAt: string | null;
   leftAt: string | null;
   callDurationSeconds: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  accuracyMeters: number | null;
+  geoCapturedAt: string | null;
+  geoError: string | null;
 };
 
 export type LobbyMessage = {

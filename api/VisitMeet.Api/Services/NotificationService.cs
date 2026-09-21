@@ -93,4 +93,7 @@ public class NotificationService(IHubContext<NotificationHub> hub)
 
     public Task ActiveOfficerConnectedAsync(string slug, Guid waitingId, DateTimeOffset connectedAt) =>
         hub.Clients.Group($"host:{slug}").SendAsync("activeConnected", waitingId, connectedAt);
+
+    public Task GeotagUpdatedAsync(string slug, WaitingOfficerDto waiting) =>
+        hub.Clients.Group($"host:{slug}").SendAsync("geotagUpdated", waiting);
 }

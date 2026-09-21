@@ -127,7 +127,7 @@ Then follow [infra/ec2/README.md](infra/ec2/README.md) to run LiveKit, the ASP.N
 - One active FO at a time with focused video and field-officer timer
 - Open field-officer join with bank / branch / group / member tagging (no ID validation)
 - Recording segments start and stop on FO join/leave webhooks
-- Capture a frame from live video, crop it, store it against bank/group/member
+- Capture a frame from live video, crop it, stamp the field officer’s phone GPS and time, and store it against bank/group/member
 - Meeting APIs under `/api/meetings`
 - LiveKit webhook at `/api/webhooks/livekit`
 

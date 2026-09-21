@@ -52,9 +52,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.GroupId).HasMaxLength(64);
             e.Property(x => x.MemberId).HasMaxLength(64);
             e.Property(x => x.Status).HasMaxLength(40);
+            e.Property(x => x.GeoError).HasMaxLength(120);
             e.HasOne(x => x.CreditOfficer).WithMany().HasForeignKey(x => x.CreditOfficerId).OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Messages).WithOne(x => x.RecipientWaitingOfficer)
                 .HasForeignKey(x => x.RecipientWaitingOfficerId);
+        });
+
+        modelBuilder.Entity<Snapshot>(e =>
+        {
+            e.Property(x => x.GeoError).HasMaxLength(120);
         });
 
         modelBuilder.Entity<LobbyMessage>(e =>

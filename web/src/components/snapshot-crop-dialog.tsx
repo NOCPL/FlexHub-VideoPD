@@ -13,15 +13,25 @@ import {
 } from "@/components/ui/dialog";
 import { api } from "@/lib/api";
 import { getCroppedPng } from "@/lib/crop";
+import { geotagSummary, type FieldGeotag } from "@/lib/geotag";
 
 type Props = {
   meetingId: string;
+  fieldOfficerId?: string | null;
+  geotag?: FieldGeotag | null;
   imageSrc: string | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export function SnapshotCropDialog({ meetingId, imageSrc, onClose, onSaved }: Props) {
+export function SnapshotCropDialog({
+  meetingId,
+  fieldOfficerId,
+  geotag,
+  imageSrc,
+  onClose,
+  onSaved,
+}: Props) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<Area | null>(null);
@@ -37,7 +47,16 @@ export function SnapshotCropDialog({ meetingId, imageSrc, onClose, onSaved }: Pr
     setSaving(true);
     setError(null);
     try {
-      const blob = await getCroppedPng(imageSrc, area);
+      let stamp: FieldGeotag | null | undefined = geotag;
+      if (fieldOfficerId) {
+        try {
+          const room = await api.waiting(fieldOfficerId);
+          stamp = room.waiting;
+        } catch {
+          /* use the last geotag from the lobby if refresh fails */
+        }
+      }
+      const blob = await getCroppedPng(imageSrc, area, stamp);
       await api.uploadSnapshot(meetingId, blob, area);
       onSaved();
       onClose();
@@ -54,8 +73,7 @@ export function SnapshotCropDialog({ meetingId, imageSrc, onClose, onSaved }: Pr
         <DialogHeader>
           <DialogTitle>Crop evidence still</DialogTitle>
           <DialogDescription>
-            Frame the member or document from the live video. The cropped image is stored against this
-            Video PD&apos;s bank, branch, group, and member IDs.
+            The field officer’s phone GPS and time are printed on the saved image.
           </DialogDescription>
         </DialogHeader>
         <div className="relative h-80 overflow-hidden rounded-lg bg-black">
@@ -71,6 +89,7 @@ export function SnapshotCropDialog({ meetingId, imageSrc, onClose, onSaved }: Pr
             />
           ) : null}
         </div>
+        <p className="text-sm text-[#29416f]">{geotagSummary(geotag)}</p>
         <label className="flex items-center gap-3 text-sm">
           Zoom
           <input

@@ -133,6 +133,20 @@ export const api = {
     request<void>(`/api/waiting/${id}/leave`, { method: "POST" }),
   waitingConnect: (id: string) =>
     request<JoinTokenResponse>(`/api/waiting/${id}/connect`, { method: "POST" }),
+  reportGeotag: (
+    id: string,
+    body: {
+      latitude: number | null;
+      longitude: number | null;
+      accuracyMeters: number | null;
+      capturedAt: string | null;
+      error: string | null;
+    },
+  ) =>
+    request<WaitingOfficer>(`/api/waiting/${id}/geotag`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
   denyWaiting: (id: string) =>
     request<void>(`/api/waiting/${id}/deny`, { method: "POST" }),
   createCreditOfficer: (body: { name: string; email: string; temporaryPassword: string }) =>

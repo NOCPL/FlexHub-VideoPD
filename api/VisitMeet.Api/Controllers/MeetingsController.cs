@@ -138,7 +138,8 @@ public class MeetingsController(
         var dto = new SnapshotDto(
             snapshot.Id, snapshot.Bank, snapshot.Branch, snapshot.GroupId, snapshot.MemberId,
             $"/api/meetings/{meeting.Id}/snapshots/{snapshot.Id}/file",
-            snapshot.CropX, snapshot.CropY, snapshot.CropWidth, snapshot.CropHeight, snapshot.CreatedAt);
+            snapshot.CropX, snapshot.CropY, snapshot.CropWidth, snapshot.CropHeight, snapshot.CreatedAt,
+            snapshot.Latitude, snapshot.Longitude, snapshot.AccuracyMeters, snapshot.GeoCapturedAt, snapshot.GeoError);
         return Created(dto.Url, dto);
     }
 

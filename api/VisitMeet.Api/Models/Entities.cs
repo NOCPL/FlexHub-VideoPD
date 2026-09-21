@@ -105,6 +105,11 @@ public class Snapshot
     public int? CropHeight { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public Guid CapturedByUserId { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public double? AccuracyMeters { get; set; }
+    public DateTimeOffset? GeoCapturedAt { get; set; }
+    public string? GeoError { get; set; }
 }
 
 public class ChatMessage
@@ -137,6 +142,11 @@ public class WaitingOfficer
     public DateTimeOffset? ConnectedAt { get; set; }
     public DateTimeOffset? LeftAt { get; set; }
     public int? CallDurationSeconds { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+    public double? AccuracyMeters { get; set; }
+    public DateTimeOffset? GeoCapturedAt { get; set; }
+    public string? GeoError { get; set; }
     public ICollection<LobbyMessage> Messages { get; set; } = new List<LobbyMessage>();
 }
 

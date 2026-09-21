@@ -26,7 +26,12 @@ public class LobbyService(
             waiting.AdmittedAt,
             waiting.ConnectedAt,
             waiting.LeftAt,
-            waiting.CallDurationSeconds);
+            waiting.CallDurationSeconds,
+            waiting.Latitude,
+            waiting.Longitude,
+            waiting.AccuracyMeters,
+            waiting.GeoCapturedAt,
+            waiting.GeoError);
 
     public static LobbyMessageDto ToChat(LobbyMessage message) =>
         new(
@@ -278,5 +283,51 @@ public class LobbyService(
             waiting.HostSlug,
             meeting.Id);
         return new JoinTokenResponse(livekit, guestToken, liveKit.WsUrl, identity, meetings.Mapper.ToDetail(meeting));
+    }
+
+    public async Task<WaitingOfficerDto> ReportGeotagAsync(WaitingOfficer waiting, GeotagReportRequest request)
+    {
+        if (waiting.Status is WaitingStatuses.Left or WaitingStatuses.Denied)
+        {
+            throw new InvalidOperationException("This field officer is no longer in the Video PD.");
+        }
+
+        var capturedAt = request.CapturedAt ?? DateTimeOffset.UtcNow;
+        if (capturedAt > DateTimeOffset.UtcNow.AddMinutes(5))
+        {
+            capturedAt = DateTimeOffset.UtcNow;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Error))
+        {
+            var error = request.Error.Trim();
+            waiting.GeoError = error.Length > 120 ? error[..120] : error;
+            waiting.GeoCapturedAt ??= capturedAt;
+        }
+        else
+        {
+            if (request.Latitude is null || request.Longitude is null)
+            {
+                throw new InvalidOperationException("Latitude and longitude are required.");
+            }
+
+            var lat = request.Latitude.Value;
+            var lng = request.Longitude.Value;
+            if (lat is < -90 or > 90 || lng is < -180 or > 180)
+            {
+                throw new InvalidOperationException("Coordinates are out of range.");
+            }
+
+            waiting.Latitude = lat;
+            waiting.Longitude = lng;
+            waiting.AccuracyMeters = request.AccuracyMeters is < 0 ? 0 : request.AccuracyMeters;
+            waiting.GeoCapturedAt = capturedAt;
+            waiting.GeoError = null;
+        }
+
+        await db.SaveChangesAsync();
+        var dto = ToDto(waiting);
+        await notifications.GeotagUpdatedAsync(waiting.HostSlug, dto);
+        return dto;
     }
 }

@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api, ApiError, getToken, hubUrl, setGuestToken } from "@/lib/api";
+import { useFieldOfficerGeotag } from "@/hooks/use-field-officer-geotag";
 import type { JoinTokenResponse, LobbyMessage, User, WaitingOfficer } from "@/lib/types";
 
 export default function JoinPage() {
@@ -44,6 +45,7 @@ function JoinBody() {
   const connectingRef = useRef(false);
   const inCallRef = useRef(false);
   const endedRef = useRef(false);
+  const { label: gpsLabel, status: gpsStatus } = useFieldOfficerGeotag(waiting?.id ?? null);
 
   useEffect(() => {
     connectingRef.current = false;
@@ -223,6 +225,7 @@ function JoinBody() {
           serverUrl={session.liveKitUrl}
           meeting={session.meeting}
           user={guest}
+          gpsLabel={gpsLabel}
           onLeave={() => {
             setGuestToken(null);
             setSession(null);
@@ -323,6 +326,9 @@ function JoinBody() {
             <p>Branch: {waiting.branch || branch || "—"}</p>
             <p>Group: {waiting.groupId || groupId || "—"}</p>
             <p>Member: {waiting.memberId || memberId || "—"}</p>
+            <p className={gpsStatus === "error" ? "text-destructive" : ""}>
+              GPS: {gpsStatus === "locating" ? "Allow location on this phone…" : gpsLabel}
+            </p>
             <Button variant="outline" className="mt-2 w-full" onClick={leaveWait}>
               Leave queue
             </Button>
@@ -340,8 +346,8 @@ function JoinBody() {
         <CardHeader>
           <CardTitle className="text-[#10264e]">Join Video PD</CardTitle>
           <CardDescription className="text-[#5a6a84]">
-            You will wait until the credit officer admits you. Bank, branch, group, and member IDs are stored
-            as-is. They are not validated here.
+            You will wait until the credit officer admits you. This phone’s GPS and time are attached to
+            captured stills. Bank, branch, group, and member IDs are stored as-is. They are not validated here.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
