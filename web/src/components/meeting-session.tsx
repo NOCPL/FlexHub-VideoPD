@@ -262,7 +262,7 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/55 text-center">
             <p className="text-lg font-medium">Waiting for the admitted officer to connect</p>
             <p className="mt-2 max-w-md text-sm text-white/70">
-              Their video fills this screen. Chat stays on the waiting list.
+              Their full camera frame fills this screen. Chat stays on the waiting list.
             </p>
           </div>
         ) : null}
@@ -271,7 +271,7 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
             data-identity={mainTrack.participant.isLocal ? "local-main" : mainTrack.participant.identity}
             className="h-full overflow-hidden bg-black"
           >
-            <VideoTrack trackRef={mainTrack} className="h-full w-full object-cover" />
+            <VideoTrack trackRef={mainTrack} className="h-full w-full object-contain" />
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center text-[#9fb4d4]">
