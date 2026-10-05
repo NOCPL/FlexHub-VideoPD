@@ -13,7 +13,7 @@ public class LobbyService(
     TokenService tokens,
     NotificationService notifications)
 {
-    public WaitingOfficerDto ToDto(WaitingOfficer waiting) =>
+    public WaitingOfficerDto ToDto(WaitingOfficer waiting, int? tokenNumber = null, int? estimatedWaitMinutes = null) =>
         new(
             waiting.Id,
             waiting.DisplayName,
@@ -31,7 +31,47 @@ public class LobbyService(
             waiting.Longitude,
             waiting.AccuracyMeters,
             waiting.GeoCapturedAt,
-            waiting.GeoError);
+            waiting.GeoError,
+            tokenNumber,
+            estimatedWaitMinutes);
+
+    public static int WaitMinutesForToken(int tokenNumber) =>
+        Math.Max(0, (tokenNumber - 1) * 5);
+
+    public async Task<(int TokenNumber, int EstimatedWaitMinutes)> QueuePlaceAsync(WaitingOfficer waiting)
+    {
+        if (waiting.Status is WaitingStatuses.Admitted or WaitingStatuses.Connected)
+        {
+            return (1, 0);
+        }
+
+        var waitingList = await db.WaitingOfficers
+            .Where(w => w.HostSlug == waiting.HostSlug && w.Status == WaitingStatuses.Waiting)
+            .ToListAsync();
+        var ordered = waitingList.OrderBy(w => w.CreatedAt).ThenBy(w => w.Id).ToList();
+        var index = ordered.FindIndex(w => w.Id == waiting.Id);
+        var token = (index < 0 ? 0 : index) + 1;
+        return (token, WaitMinutesForToken(token));
+    }
+
+    public async Task<WaitingOfficerDto> ToQueuedDtoAsync(WaitingOfficer waiting)
+    {
+        var (token, wait) = await QueuePlaceAsync(waiting);
+        return ToDto(waiting, token, wait);
+    }
+
+    public IReadOnlyList<WaitingOfficerDto> NumberWaiting(IReadOnlyList<WaitingOfficer> waiting) =>
+        waiting.Select((officer, index) =>
+        {
+            var token = index + 1;
+            return ToDto(officer, token, WaitMinutesForToken(token));
+        }).ToList();
+
+    public async Task BroadcastQueueAsync(string slug)
+    {
+        var waiting = await ListWaitingAsync(slug);
+        await notifications.QueueUpdatedAsync(slug, NumberWaiting(waiting));
+    }
 
     public static LobbyMessageDto ToChat(LobbyMessage message) =>
         new(
@@ -69,8 +109,8 @@ public class LobbyService(
         return new HostLobbyDto(
             meetings.Mapper.ToUser(officer),
             meeting is null ? null : meetings.Mapper.ToDetail(meeting),
-            waiting.Select(ToDto).ToList(),
-            active is null ? null : ToDto(active),
+            NumberWaiting(waiting),
+            active is null ? null : ToDto(active, 1, 0),
             chat.OrderBy(m => m.SentAt).Select(ToChat).ToList());
     }
 
@@ -99,8 +139,9 @@ public class LobbyService(
         db.WaitingOfficers.Add(waiting);
         await db.SaveChangesAsync();
 
-        var dto = ToDto(waiting);
+        var dto = await ToQueuedDtoAsync(waiting);
         await notifications.WaitingArrivedAsync(waiting.HostSlug, officer.Id, dto);
+        await BroadcastQueueAsync(waiting.HostSlug);
         var guestToken = tokens.CreateGuestToken(guestId, displayName, waiting.Id, waiting.HostSlug);
         return new WaitResponse(guestToken, dto, officer.Name, waiting.HostSlug);
     }
@@ -178,6 +219,7 @@ public class LobbyService(
             waiting.LeftAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
             await notifications.WaitingLeftAsync(waiting.HostSlug, waiting.Id);
+            await BroadcastQueueAsync(waiting.HostSlug);
         }
     }
 
@@ -191,6 +233,7 @@ public class LobbyService(
         waiting.LeftAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync();
         await notifications.WaitingDeniedAsync(waiting.HostSlug, waiting.Id);
+        await BroadcastQueueAsync(waiting.HostSlug);
     }
 
     public async Task<AdmitResponse> AdmitAsync(User officer, WaitingOfficer waiting)
@@ -251,8 +294,9 @@ public class LobbyService(
         var hostLivekit = liveKit.CreateParticipantToken(meeting, hostIdentity, officer.Name, Roles.CreditOfficer);
         var host = new JoinTokenResponse(hostLivekit, "", liveKit.WsUrl, hostIdentity, meetings.Mapper.ToDetail(meeting));
 
-        var dto = ToDto(waiting);
+        var dto = await ToQueuedDtoAsync(waiting);
         await notifications.AdmittedAsync(waiting.HostSlug, waiting.Id, field, host);
+        await BroadcastQueueAsync(waiting.HostSlug);
         return new AdmitResponse(field, host, dto);
     }
 
@@ -337,7 +381,7 @@ public class LobbyService(
         }
 
         await db.SaveChangesAsync();
-        var dto = ToDto(waiting);
+        var dto = await ToQueuedDtoAsync(waiting);
         await notifications.GeotagUpdatedAsync(waiting.HostSlug, dto);
         return dto;
     }

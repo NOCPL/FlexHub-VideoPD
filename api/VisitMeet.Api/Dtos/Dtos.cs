@@ -147,7 +147,9 @@ public record WaitingOfficerDto(
     double? Longitude,
     double? AccuracyMeters,
     DateTimeOffset? GeoCapturedAt,
-    string? GeoError);
+    string? GeoError,
+    int? TokenNumber,
+    int? EstimatedWaitMinutes);
 
 public record WaitingRoomDto(
     WaitingOfficerDto Waiting,

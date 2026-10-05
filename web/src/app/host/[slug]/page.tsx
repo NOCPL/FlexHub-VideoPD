@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, ApiError, getAuthToken, hubUrl, setGuestToken } from "@/lib/api";
 import { geotagSummary, hasCoordinates } from "@/lib/geotag";
+import { tokenLabel, waitEstimateLabel } from "@/lib/queue";
 import type { JoinTokenResponse, LobbyMessage, WaitingOfficer } from "@/lib/types";
 
 export default function HostPage() {
@@ -120,6 +121,19 @@ export default function HostPage() {
     connection.on("geotagUpdated", (officer: WaitingOfficer) => {
       setWaiting((list) => list.map((item) => (item.id === officer.id ? { ...item, ...officer } : item)));
       setActive((current) => (current?.id === officer.id ? { ...current, ...officer } : current));
+    });
+    connection.on("queueUpdated", (officers: WaitingOfficer[]) => {
+      if (Array.isArray(officers)) setWaiting(officers);
+    });
+    connection.on("queueShifted", () => {
+      void api
+        .hostCurrent(slug)
+        .then((lobby) => {
+          setWaiting(lobby.waiting ?? []);
+          if (lobby.active) setActive(lobby.active);
+          else setActive(null);
+        })
+        .catch(() => undefined);
     });
 
     const connect = window.setTimeout(() => {
@@ -279,14 +293,21 @@ export default function HostPage() {
             <div className="max-h-64 overflow-y-auto">
               {waiting.length === 0 ? <p className="p-4 text-center text-sm text-[#5a6a84]">No one is waiting.</p> : waiting.map((officer) => (
                 <div key={officer.id} className="border-b p-3 last:border-b-0">
-                  <div className="font-semibold text-[#10264e]">{officer.displayName}</div>
-                  <div className="text-xs text-[#5a6a84]">{officer.bank || "—"} · {officer.branch || "—"} · {officer.groupId || "—"} · {officer.memberId || "—"}</div>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-[#fff1e4] text-sm font-bold text-[#c2380f]">
+                      {tokenLabel(officer.tokenNumber)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-[#10264e]">{officer.displayName}</div>
+                      <div className="text-xs text-[#5a6a84]">{officer.bank || "—"} · {officer.branch || "—"} · {officer.groupId || "—"} · {officer.memberId || "—"}</div>
+                    </div>
+                  </div>
                   <div className={`mt-1 text-xs ${hasCoordinates(officer) ? "text-[#29416f]" : "text-[#c2380f]"}`}>
                     {hasCoordinates(officer)
                       ? geotagSummary(officer)
                       : "Waiting for GPS. Admit is blocked until they allow location."}
                   </div>
-                  <div className="mt-1 flex items-center gap-1 text-xs text-[#5a6a84]"><Clock className="size-3" /> Waiting <WaitingTimer startedAt={officer.createdAt} /></div>
+                  <div className="mt-1 flex items-center gap-1 text-xs text-[#5a6a84]"><Clock className="size-3" /> {waitEstimateLabel(officer.estimatedWaitMinutes)} · in queue <WaitingTimer startedAt={officer.createdAt} /></div>
                   <div className="mt-2 flex gap-2">
                     <Button className="flex-1 bg-[#f7481c] hover:bg-[#d63a11]" size="sm" disabled={Boolean(active) || admitting === officer.id || !hasCoordinates(officer)} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : hasCoordinates(officer) ? "Admit" : "Waiting for GPS"}</Button>
                     <Button variant="outline" size="icon-sm" title="Private message" onClick={() => { setChatTarget(officer.id); setUnread((u) => ({ ...u, [officer.id]: 0 })); }}><MessageSquare /></Button>

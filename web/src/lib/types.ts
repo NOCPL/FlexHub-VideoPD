@@ -126,6 +126,8 @@ export type WaitingOfficer = {
   accuracyMeters: number | null;
   geoCapturedAt: string | null;
   geoError: string | null;
+  tokenNumber: number | null;
+  estimatedWaitMinutes: number | null;
 };
 
 export type LobbyMessage = {

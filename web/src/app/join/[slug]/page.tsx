@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { api, ApiError, getToken, hubUrl, setGuestToken } from "@/lib/api";
 import { hasCoordinates, gpsRequiredMessage } from "@/lib/geotag";
 import { GpsRequiredError, readPhoneGps, useFieldOfficerGeotag } from "@/hooks/use-field-officer-geotag";
+import { MINUTES_PER_TOKEN, tokenLabel, waitEstimateLabel } from "@/lib/queue";
 import type { JoinTokenResponse, LobbyMessage, User, WaitingOfficer } from "@/lib/types";
 
 export default function JoinPage() {
@@ -165,6 +166,19 @@ function JoinBody() {
       inCallRef.current = false;
       setCallEnded(true);
       setSession(null);
+    });
+    connection.on("queueUpdated", (officer: WaitingOfficer) => {
+      if (!officer || officer.id !== waiting.id) return;
+      setWaiting((current) => (current ? { ...current, ...officer } : officer));
+    });
+    connection.on("queueShifted", () => {
+      void api
+        .waiting(waiting.id)
+        .then((latest) => {
+          setWaiting(latest.waiting);
+          setMessages(latest.chat ?? []);
+        })
+        .catch(() => undefined);
     });
 
     const connect = window.setTimeout(() => {
@@ -347,9 +361,38 @@ function JoinBody() {
       chatTarget === "all"
         ? message.recipientWaitingOfficerId === null
         : message.recipientWaitingOfficerId === waiting.id);
+    const tokenNumber = waiting.tokenNumber;
+    const waitMinutes = waiting.estimatedWaitMinutes;
     return (
       <main className="min-h-full bg-[#eef1f6]">
         <div className="mx-auto grid max-w-3xl gap-4 px-4 py-10 md:grid-cols-[1fr_280px]">
+        <Card className="border border-[#d7deea] bg-white md:col-span-2">
+          <CardContent className="grid gap-4 py-6 sm:grid-cols-2">
+            <div className="rounded-2xl bg-[#10264e] px-5 py-6 text-center text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9fb4d4]">Your token</p>
+              <p className="mt-2 text-6xl font-bold leading-none">{tokenLabel(tokenNumber)}</p>
+              <p className="mt-3 text-sm text-[#9fb4d4]">
+                {tokenNumber == null
+                  ? "Waiting officers in this queue"
+                  : tokenNumber === 1
+                    ? "You are first in the waiting queue"
+                    : `You are token ${tokenNumber} in the waiting queue`}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[#ffd7c4] bg-[#fff6f0] px-5 py-6 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c2380f]">Estimated wait</p>
+              <p className="mt-2 text-4xl font-bold leading-none text-[#f7481c]">
+                {waitMinutes == null ? "—" : waitMinutes <= 0 ? "You’re next" : `${waitMinutes} min`}
+              </p>
+              <p className="mt-3 text-sm text-[#8a4a32]">
+                {MINUTES_PER_TOKEN} min per officer ahead of you
+                {tokenNumber != null && tokenNumber > 1
+                  ? ` · ${tokenNumber - 1} ahead`
+                  : ""}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
         <Card className="border border-[#d7deea] bg-white">
           <CardHeader>
             <CardTitle className="text-[#10264e]">Waiting for {creditOfficerName}</CardTitle>
@@ -408,6 +451,8 @@ function JoinBody() {
             <CardTitle className="text-base text-[#10264e]">Your Video PD tags</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-[#29416f]">
+            <p>Token: {tokenLabel(waiting.tokenNumber)}</p>
+            <p>Estimated wait: {waitEstimateLabel(waiting.estimatedWaitMinutes)}</p>
             <p>Bank: {waiting.bank || bank || "—"}</p>
             <p>Branch: {waiting.branch || branch || "—"}</p>
             <p>Group: {waiting.groupId || groupId || "—"}</p>

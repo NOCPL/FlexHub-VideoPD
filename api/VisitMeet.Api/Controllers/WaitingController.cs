@@ -20,7 +20,7 @@ public class WaitingController(LobbyService lobby) : ControllerBase
         if (!CanAccess(waiting)) return Forbid();
         var isHost = User.IsInRole(Roles.Admin) || User.IsInRole(Roles.CreditOfficer);
         return new WaitingRoomDto(
-            lobby.ToDto(waiting),
+            await lobby.ToQueuedDtoAsync(waiting),
             await lobby.GetChatAsync(waiting, isHost));
     }
 

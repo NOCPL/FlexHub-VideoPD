@@ -355,6 +355,7 @@ public class MeetingService(
             waiting.HostSlug,
             waiting.Id,
             waiting.CallDurationSeconds.Value);
+        await notifications.QueueShiftedAsync(waiting.HostSlug);
     }
 
     public async Task CompleteAsync(Meeting meeting)
@@ -401,6 +402,10 @@ public class MeetingService(
                 waiting.HostSlug,
                 waiting.Id,
                 waiting.CallDurationSeconds ?? 0);
+        }
+        if (activeOfficers.Count > 0)
+        {
+            await notifications.QueueShiftedAsync(activeOfficers[0].HostSlug);
         }
         await notifications.MeetingEndedAsync(meeting);
         await liveKit.DeleteRoomAsync(meeting.LiveKitRoomName);

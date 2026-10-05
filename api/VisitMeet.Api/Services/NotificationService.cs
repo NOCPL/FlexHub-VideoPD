@@ -59,6 +59,25 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             hub.Clients.Group($"host:{slug}").SendAsync("waitingArrived", waiting));
     }
 
+    public Task QueueUpdatedAsync(string slug, IReadOnlyList<WaitingOfficerDto> waiting)
+    {
+        var sends = new List<Task>
+        {
+            hub.Clients.Group($"host:{slug}").SendAsync("queueUpdated", waiting),
+            hub.Clients.Group($"lobby:{slug}").SendAsync("queueShifted")
+        };
+        foreach (var officer in waiting)
+        {
+            sends.Add(hub.Clients.Group($"waiting:{officer.Id}").SendAsync("queueUpdated", officer));
+        }
+        return Task.WhenAll(sends);
+    }
+
+    public Task QueueShiftedAsync(string slug) =>
+        Task.WhenAll(
+            hub.Clients.Group($"host:{slug}").SendAsync("queueShifted"),
+            hub.Clients.Group($"lobby:{slug}").SendAsync("queueShifted"));
+
     public Task WaitingLeftAsync(string slug, Guid waitingId) =>
         Task.WhenAll(
             hub.Clients.Group($"host:{slug}").SendAsync("waitingLeft", waitingId),

@@ -17,7 +17,7 @@ Each credit officer gets a **permanent host slug** at user creation (unguessable
 
 **Current visit for a slug:** the officer’s meeting in `WaitingForFieldOfficer` or `InProgress`, else the next `Scheduled` by time. Opening `/host/{slug}` always shows the lobby, even with no field officers and no scheduled visit (a desk visit is created when someone is admitted).
 
-**Field join:** `POST /api/join` puts the field officer in the **waiting queue** (not the LiveKit call). Missing params are stored empty. Wrong IDs are never rejected. The credit officer sees Bank → Branch → Group → Member, can chat with Everyone or privately, and then taps **Admit**. Only one FO is admitted at a time; admitted officers speak on the call and leave lobby chat.
+**Field join:** `POST /api/join` puts the field officer in the **waiting queue** (not the LiveKit call). Missing params are stored empty. Wrong IDs are never rejected. The waiting screen shows a **token number** (1st waiting officer = token 1) and an **estimated wait of 5 minutes per officer ahead** — token 3 waits about 10 minutes. The credit officer sees Bank → Branch → Group → Member, can chat with Everyone or privately, and then taps **Admit**. Only one FO is admitted at a time; admitted officers speak on the call and leave lobby chat.
 
 **Recording segments:** recording starts when the admitted field officer connects and stops when they leave. Rejoining creates a new segment.
 
@@ -27,7 +27,7 @@ Each credit officer gets a **permanent host slug** at user creation (unguessable
 
 | Role | Email | Password | Static host URL |
 | --- | --- | --- | --- |
-| Credit officer (Priya Shah) | `credit@visit.local` | `Credit@123` | `/host/h8k2m9q4w1` |
+| Credit officer (Rajkumar) | `credit@visit.local` | `Credit@123` | `/host/h8k2m9q4w1` |
 | Admin | `admin@visit.local` | `Admin@123` | Opens a credit officer’s host URL after login |
 
 Field officers have **no Flexhub Video PD account**. Open the join link, optionally set a display name (default “Field officer”), wait in the lobby, and speak after the credit officer admits you.

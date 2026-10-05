@@ -15,7 +15,7 @@ public static class SeedData
         var credit = new User
         {
             Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            Name = "Priya Shah",
+            Name = "Rajkumar",
             Email = "credit@visit.local",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Credit@123"),
             Role = Roles.CreditOfficer,
