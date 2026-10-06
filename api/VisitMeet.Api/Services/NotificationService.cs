@@ -97,7 +97,14 @@ public class NotificationService(IHubContext<NotificationHub> hub)
         if (recipientWaitingId is Guid recipient)
         {
             sends.Add(hub.Clients.Group($"waiting:{recipient}").SendAsync("lobbyChat", message));
-            sends.Add(hub.Clients.Group($"waiting:{recipient}").SendAsync("chatNotify", message));
+            if (message.SenderRole == Roles.FieldGuest)
+            {
+                sends.Add(hub.Clients.Group($"host:{slug}").SendAsync("chatNotify", message));
+            }
+            else
+            {
+                sends.Add(hub.Clients.Group($"waiting:{recipient}").SendAsync("chatNotify", message));
+            }
         }
         else
         {

@@ -300,11 +300,11 @@ function JoinBody() {
 
   if (callEnded) {
     return (
-      <main className="flex min-h-full items-center justify-center bg-[#eef1f6] p-4">
-        <Card className="max-w-md border border-[#d7deea] bg-white text-center">
-          <CardHeader>
-            <CardTitle className="text-[#10264e]">This Video PD has ended</CardTitle>
-            <CardDescription className="text-[#5a6a84]">
+      <main className="flex min-h-full w-full items-center justify-center bg-[#eef1f6] px-4 py-10">
+        <Card className="w-full max-w-md shrink-0 border border-[#d7deea] bg-white text-center">
+          <CardHeader className="w-full text-center">
+            <CardTitle className="text-balance text-[#10264e]">This Video PD has ended</CardTitle>
+            <CardDescription className="text-pretty text-[#5a6a84]">
               The credit officer ended the call. You can close this page.
             </CardDescription>
           </CardHeader>
@@ -343,11 +343,11 @@ function JoinBody() {
 
   if (denied) {
     return (
-      <main className="flex min-h-full items-center justify-center bg-[#eef1f6] p-4">
-        <Card className="max-w-md border border-[#d7deea] bg-white text-center">
-          <CardHeader>
-            <CardTitle className="text-[#10264e]">The credit officer declined this Video PD</CardTitle>
-            <CardDescription className="text-[#5a6a84]">
+      <main className="flex min-h-full w-full items-center justify-center bg-[#eef1f6] px-4 py-10">
+        <Card className="w-full max-w-md shrink-0 border border-[#d7deea] bg-white text-center">
+          <CardHeader className="w-full text-center">
+            <CardTitle className="text-balance text-[#10264e]">The credit officer declined this Video PD</CardTitle>
+            <CardDescription className="text-pretty text-[#5a6a84]">
               You were not admitted to the call. Ask your team for a new join link if you still need to complete Video PD.
             </CardDescription>
           </CardHeader>
@@ -365,43 +365,31 @@ function JoinBody() {
     const waitMinutes = waiting.estimatedWaitMinutes;
     return (
       <main className="min-h-full bg-[#eef1f6]">
-        <div className="mx-auto grid max-w-3xl gap-4 px-4 py-10 md:grid-cols-[1fr_280px]">
-        <Card className="border border-[#d7deea] bg-white md:col-span-2">
-          <CardContent className="grid gap-4 py-6 sm:grid-cols-2">
-            <div className="rounded-2xl bg-[#10264e] px-5 py-6 text-center text-white">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9fb4d4]">Your token</p>
-              <p className="mt-2 text-6xl font-bold leading-none">{tokenLabel(tokenNumber)}</p>
-              <p className="mt-3 text-sm text-[#9fb4d4]">
-                {tokenNumber == null
-                  ? "Waiting officers in this queue"
-                  : tokenNumber === 1
-                    ? "You are first in the waiting queue"
-                    : `You are token ${tokenNumber} in the waiting queue`}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[#ffd7c4] bg-[#fff6f0] px-5 py-6 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c2380f]">Estimated wait</p>
-              <p className="mt-2 text-4xl font-bold leading-none text-[#f7481c]">
-                {waitMinutes == null ? "—" : waitMinutes <= 0 ? "You’re next" : `${waitMinutes} min`}
-              </p>
-              <p className="mt-3 text-sm text-[#8a4a32]">
-                {MINUTES_PER_TOKEN} min per officer ahead of you
-                {tokenNumber != null && tokenNumber > 1
-                  ? ` · ${tokenNumber - 1} ahead`
-                  : ""}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="mx-auto grid max-w-3xl gap-3 px-4 py-4 md:grid-cols-[1fr_260px]">
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-[#10264e] px-3 py-2.5 text-white md:col-span-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9fb4d4]">Token</p>
+            <p className="text-xl font-bold leading-none">{tokenLabel(tokenNumber)}</p>
+          </div>
+          <div className="min-w-0 text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffb89a]">Estimated wait</p>
+            <p className="text-sm font-semibold leading-tight text-[#ffd2ba]">
+              {waitMinutes == null ? "—" : waitMinutes <= 0 ? "You’re next" : `About ${waitMinutes} min`}
+            </p>
+            <p className="text-[11px] text-[#9fb4d4]">
+              {MINUTES_PER_TOKEN} min per officer ahead
+              {tokenNumber != null && tokenNumber > 1 ? ` · ${tokenNumber - 1} ahead` : ""}
+            </p>
+          </div>
+        </div>
         <Card className="border border-[#d7deea] bg-white">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-[#10264e]">Waiting for {creditOfficerName}</CardTitle>
             <CardDescription className="text-[#5a6a84]">
-              You are not in the call yet. Chat here until the credit officer admits you, then speak
-              on the call.
+              Chat here until the credit officer admits you.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex h-[28rem] flex-col">
+          <CardContent className="flex h-[22rem] flex-col md:h-[26rem]">
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto text-sm">
               <div className="mb-3 flex gap-2">
                 <Button

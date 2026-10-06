@@ -99,6 +99,13 @@ export default function HostPage() {
         const target = message.recipientWaitingOfficerId ?? "all";
         setUnread((current) => ({ ...current, [target]: (current[target] ?? 0) + 1 }));
         addChatNotice(`/host/${slug}`, message.senderName, message.body, message.id);
+        if (message.recipientWaitingOfficerId) {
+          setChatTarget(message.recipientWaitingOfficerId);
+          toast(message.senderName || "Field officer", {
+            description: message.body,
+            duration: 10_000,
+          });
+        }
       }
     });
     connection.on("admitted", (waitingId: string) => {

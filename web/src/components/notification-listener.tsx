@@ -4,13 +4,13 @@ import { HttpTransportType, HubConnectionBuilder, LogLevel } from "@microsoft/si
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { getAuthToken, hubUrl } from "@/lib/api";
-import type { NotificationPayload } from "@/lib/types";
+import type { LobbyMessage, NotificationPayload } from "@/lib/types";
 import { useAuth } from "@/components/auth-provider";
 import { useNotifications } from "@/components/notification-center";
 
 export function NotificationListener() {
   const { user } = useAuth();
-  const { addFromPayload } = useNotifications();
+  const { addFromPayload, addChatNotice } = useNotifications();
 
   useEffect(() => {
     if (!user) return;
@@ -48,6 +48,26 @@ export function NotificationListener() {
         },
       });
     });
+    connection.on("chatNotify", (message: LobbyMessage) => {
+      if (message.senderRole !== "FieldGuest") return;
+      if (!message.recipientWaitingOfficerId) return;
+      if (message.senderUserId === user.id) return;
+      const lobbyHref = user.hostSlug ? `/host/${user.hostSlug}` : "/dashboard";
+      addChatNotice(lobbyHref, message.senderName, message.body, message.id);
+      if (window.location.pathname.startsWith("/host/")) return;
+      toast(message.senderName || "Field officer", {
+        description: message.body,
+        duration: 10_000,
+        action: user.hostSlug
+          ? {
+              label: "Open lobby",
+              onClick: () => {
+                window.location.href = `/host/${user.hostSlug}`;
+              },
+            }
+          : undefined,
+      });
+    });
 
     const connect = window.setTimeout(() => {
       if (cancelled) return;
@@ -64,7 +84,7 @@ export function NotificationListener() {
       window.clearTimeout(connect);
       void connection.stop();
     };
-  }, [user, addFromPayload]);
+  }, [user, addFromPayload, addChatNotice]);
 
   return null;
 }
