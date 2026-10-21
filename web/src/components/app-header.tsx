@@ -21,10 +21,10 @@ export function AppHeader() {
   const router = useRouter();
 
   return (
-    <header className="border-b border-border/80 bg-[#10264e] text-white">
+    <header className="border-b border-border/80 bg-[#005792] text-white">
       <div className="mx-auto flex min-h-16 max-w-7xl items-center gap-4 px-4">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-[#f7481c]">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#3379a8] to-[#005792]">
             <Video className="size-4" />
           </span>
           <span>
@@ -60,7 +60,7 @@ export function AppHeader() {
                 >
                   <Bell />
                   {unreadCount > 0 ? (
-                    <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[#f7481c] px-1 text-center text-[10px] leading-4 text-white">
+                    <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[#005792] px-1 text-center text-[10px] leading-4 text-white">
                       {unreadCount}
                     </span>
                   ) : null}
@@ -93,7 +93,7 @@ export function AppHeader() {
                           router.push(notice.href);
                         }}
                       >
-                        <span className="mt-1 size-2 shrink-0 rounded-full bg-[#f7481c]" style={{ visibility: notice.read ? "hidden" : "visible" }} />
+                        <span className="mt-1 size-2 shrink-0 rounded-full bg-[#005792]" style={{ visibility: notice.read ? "hidden" : "visible" }} />
                         <span className="min-w-0">
                           <span className="block font-medium text-[#10264e]">{notice.title}</span>
                           {notice.description ? (

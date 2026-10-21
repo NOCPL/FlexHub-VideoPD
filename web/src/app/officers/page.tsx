@@ -48,11 +48,11 @@ export default function OfficersPage() {
   }
 
   if (loading || !user || user.role !== "Admin") {
-    return <div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading officers…</div>;
+    return <div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Loading officers…</div>;
   }
 
   return (
-    <div className="min-h-full bg-[#eef1f6]">
+    <div className="min-h-full bg-[#f0f2f5]">
       <AppHeader />
       <main className="mx-auto grid max-w-7xl gap-5 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section>
@@ -83,7 +83,7 @@ export default function OfficersPage() {
                     >
                       <Copy /> Copy
                     </Button>
-                    <Button size="sm" className="bg-[#f7481c] text-white hover:bg-[#d63a11]" asChild>
+                    <Button size="sm" className="bg-[#005792] text-white hover:bg-[#004675]" asChild>
                       <Link href={officer.hostUrl ? new URL(officer.hostUrl).pathname : "/dashboard"}><ExternalLink /> Open</Link>
                     </Button>
                   </div>
@@ -113,7 +113,7 @@ export default function OfficersPage() {
                 <Input id="temporary-password" type="password" minLength={8} required value={form.temporaryPassword} onChange={(e) => setForm({ ...form, temporaryPassword: e.target.value })} />
               </div>
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <Button type="submit" className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy}>
+              <Button type="submit" className="w-full bg-[#005792] text-white hover:bg-[#004675]" disabled={busy}>
                 {busy ? "Creating…" : "Create officer"}
               </Button>
             </form>

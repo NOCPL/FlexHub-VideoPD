@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api";
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading…</div>}>
+    <Suspense fallback={<div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Loading…</div>}>
       <LoginForm />
     </Suspense>
   );
@@ -46,7 +46,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-full flex-1 items-center justify-center bg-[#eef1f6] px-4 py-10">
+    <div className="flex min-h-full flex-1 items-center justify-center bg-[#f0f2f5] px-4 py-10">
       <div className="grid w-full max-w-4xl gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-center">
         <div>
           <h1 className="font-heading text-4xl font-semibold tracking-tight text-[#10264e]">Flexhub Video PD</h1>
@@ -75,7 +75,7 @@ function LoginForm() {
                 />
               </div>
               {error ? <p className="text-destructive text-sm">{error}</p> : null}
-              <Button type="submit" className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy}>
+              <Button type="submit" className="w-full bg-[#005792] text-white hover:bg-[#004675]" disabled={busy}>
                 {busy ? "Signing in…" : "Continue"}
               </Button>
             </form>

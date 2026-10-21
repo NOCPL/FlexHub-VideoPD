@@ -29,10 +29,10 @@ export default function VideoPdDetailPage() {
     api.meeting(id).then(setPd).catch((err) => setError(err.message));
   }, [user, id]);
 
-  if (loading || !user) return <div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading Video PD…</div>;
+  if (loading || !user) return <div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Loading Video PD…</div>;
 
   return (
-    <div className="min-h-full bg-[#eef1f6]">
+    <div className="min-h-full bg-[#f0f2f5]">
       <AppHeader />
       <main className="mx-auto max-w-4xl space-y-4 px-4 py-6">
         <Link href="/video-pd" className="text-sm text-[#29416f] underline">Back to Video PD</Link>

@@ -132,11 +132,11 @@ export default function DashboardPage() {
   }
 
   if (loading || !user) {
-    return <div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading dashboard…</div>;
+    return <div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Loading dashboard…</div>;
   }
 
   return (
-    <div className="min-h-full bg-[#eef1f6]">
+    <div className="min-h-full bg-[#f0f2f5]">
       <AppHeader />
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-4">
@@ -164,7 +164,7 @@ export default function DashboardPage() {
                 </Button>
                 <Button
                   size="sm"
-                  className="bg-[#f7481c] text-white hover:bg-[#d63a11]"
+                  className="bg-[#005792] text-white hover:bg-[#004675]"
                   onClick={() => router.push(new URL(hostUrl).pathname)}
                 >
                   Open room
@@ -243,7 +243,7 @@ export default function DashboardPage() {
               </Field>
               <Button
                 type="submit"
-                className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]"
+                className="w-full bg-[#005792] text-white hover:bg-[#004675]"
                 disabled={busy || (user.role === "Admin" && !form.creditOfficerId)}
               >
                 {busy ? "Generating…" : "Schedule and mint FO link"}

@@ -17,7 +17,7 @@ import type { JoinTokenResponse, LobbyMessage, User, WaitingOfficer } from "@/li
 
 export default function JoinPage() {
   return (
-    <Suspense fallback={<div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading join link…</div>}>
+    <Suspense fallback={<div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Loading join link…</div>}>
       <JoinBody />
     </Suspense>
   );
@@ -300,7 +300,7 @@ function JoinBody() {
 
   if (callEnded) {
     return (
-      <main className="flex min-h-full w-full items-center justify-center bg-[#eef1f6] px-4 py-10">
+      <main className="flex min-h-full w-full items-center justify-center bg-[#f0f2f5] px-4 py-10">
         <Card className="w-full max-w-md shrink-0 border border-[#d7deea] bg-white text-center">
           <CardHeader className="w-full text-center">
             <CardTitle className="text-balance text-[#10264e]">This Video PD has ended</CardTitle>
@@ -343,7 +343,7 @@ function JoinBody() {
 
   if (denied) {
     return (
-      <main className="flex min-h-full w-full items-center justify-center bg-[#eef1f6] px-4 py-10">
+      <main className="flex min-h-full w-full items-center justify-center bg-[#f0f2f5] px-4 py-10">
         <Card className="w-full max-w-md shrink-0 border border-[#d7deea] bg-white text-center">
           <CardHeader className="w-full text-center">
             <CardTitle className="text-balance text-[#10264e]">The credit officer declined this Video PD</CardTitle>
@@ -364,16 +364,16 @@ function JoinBody() {
     const tokenNumber = waiting.tokenNumber;
     const waitMinutes = waiting.estimatedWaitMinutes;
     return (
-      <main className="min-h-full bg-[#eef1f6]">
+      <main className="min-h-full bg-[#f0f2f5]">
         <div className="mx-auto grid max-w-3xl gap-3 px-4 py-4 md:grid-cols-[1fr_260px]">
-        <div className="flex items-center justify-between gap-3 rounded-xl bg-[#10264e] px-3 py-2.5 text-white md:col-span-2">
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-[#005792] px-3 py-2.5 text-white md:col-span-2">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9fb4d4]">Token</p>
             <p className="text-xl font-bold leading-none">{tokenLabel(tokenNumber)}</p>
           </div>
           <div className="min-w-0 text-right">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffb89a]">Estimated wait</p>
-            <p className="text-sm font-semibold leading-tight text-[#ffd2ba]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#adcfe4]">Estimated wait</p>
+            <p className="text-sm font-semibold leading-tight text-[#e5eef4]">
               {waitMinutes == null ? "—" : waitMinutes <= 0 ? "You’re next" : `About ${waitMinutes} min`}
             </p>
             <p className="text-[11px] text-[#9fb4d4]">
@@ -396,7 +396,7 @@ function JoinBody() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className={chatTarget === "all" ? "border-transparent bg-[#10264e] text-white hover:bg-[#29416f] hover:text-white" : ""}
+                  className={chatTarget === "all" ? "border-transparent bg-[#005792] text-white hover:bg-[#004675] hover:text-white" : ""}
                   onClick={() => setChatTarget("all")}
                 >
                   Everyone
@@ -405,7 +405,7 @@ function JoinBody() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className={chatTarget === "private" ? "border-transparent bg-[#10264e] text-white hover:bg-[#29416f] hover:text-white" : ""}
+                  className={chatTarget === "private" ? "border-transparent bg-[#005792] text-white hover:bg-[#004675] hover:text-white" : ""}
                   onClick={() => setChatTarget("private")}
                 >
                   Credit officer
@@ -430,7 +430,7 @@ function JoinBody() {
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Message the credit officer"
               />
-              <Button type="submit" className="bg-[#f7481c] text-white hover:bg-[#d63a11]">Send</Button>
+              <Button type="submit" className="bg-[#005792] text-white hover:bg-[#004675]">Send</Button>
             </form>
           </CardContent>
         </Card>
@@ -451,7 +451,7 @@ function JoinBody() {
             {!gpsReady ? (
               <>
                 <p className="text-destructive text-sm">{error ?? gpsRequiredMessage(geoErrorRef.current)}</p>
-                <Button className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy} onClick={() => void retryGps()}>
+                <Button className="w-full bg-[#005792] text-white hover:bg-[#004675]" disabled={busy} onClick={() => void retryGps()}>
                   {busy ? "Checking location…" : "Allow location and try again"}
                 </Button>
               </>
@@ -467,7 +467,7 @@ function JoinBody() {
   }
 
   return (
-    <main className="min-h-full bg-[#eef1f6]">
+    <main className="min-h-full bg-[#f0f2f5]">
       <div className="mx-auto max-w-lg px-4 py-10">
       <Card className="border border-[#d7deea] bg-white">
         <CardHeader>
@@ -501,7 +501,7 @@ function JoinBody() {
             <Input id="displayName" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <Button className="w-full bg-[#f7481c] text-white hover:bg-[#d63a11]" disabled={busy} onClick={join}>
+          <Button className="w-full bg-[#005792] text-white hover:bg-[#004675]" disabled={busy} onClick={join}>
             {busy ? "Allow location on this phone…" : "Allow location and wait"}
           </Button>
         </CardContent>

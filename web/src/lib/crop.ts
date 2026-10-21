@@ -58,7 +58,7 @@ export function stampGeotag(
   const barHeight = pad * 2 + lineHeight * lines.length;
   ctx.fillStyle = "rgba(8, 20, 42, 0.82)";
   ctx.fillRect(0, height - barHeight, width, barHeight);
-  ctx.fillStyle = "#f7481c";
+  ctx.fillStyle = "#005792";
   ctx.fillRect(0, height - barHeight, 4, barHeight);
   ctx.font = `600 ${fontSize}px ui-sans-serif, system-ui, sans-serif`;
   ctx.fillStyle = "#ffffff";

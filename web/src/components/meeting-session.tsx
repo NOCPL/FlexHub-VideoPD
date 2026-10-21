@@ -293,7 +293,7 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
         <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
           {timerRunning ? (
             <div className="flex items-center gap-2 rounded-full border border-white/15 bg-[#0b1b36]/80 px-3 py-1 text-xs">
-              <span className="size-2 animate-pulse rounded-full bg-[#f7481c]" />
+              <span className="size-2 animate-pulse rounded-full bg-[#005792]" />
               <span>REC</span>
             </div>
           ) : null}

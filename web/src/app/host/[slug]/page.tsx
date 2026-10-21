@@ -228,12 +228,12 @@ export default function HostPage() {
   }
 
   if (loading || !user) {
-    return <div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Checking your session…</div>;
+    return <div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Checking your session…</div>;
   }
 
   if (error) {
     return (
-      <div className="min-h-full bg-[#eef1f6]">
+      <div className="min-h-full bg-[#f0f2f5]">
         <AppHeader />
         <main className="mx-auto max-w-lg px-4 py-10 text-sm text-destructive">{error}</main>
       </div>
@@ -246,9 +246,9 @@ export default function HostPage() {
       : message.recipientWaitingOfficerId === chatTarget);
 
   return (
-    <div className="flex h-dvh flex-col bg-[#eef1f6]">
+    <div className="flex h-dvh flex-col bg-[#f0f2f5]">
       <AppHeader />
-      <div className="flex min-h-0 flex-1 bg-[#eef1f6] p-3">
+      <div className="flex min-h-0 flex-1 bg-[#f0f2f5] p-3">
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           {active ? (
             <div className="mb-3 flex items-center gap-3 rounded-xl border bg-white px-4 py-2">
@@ -257,7 +257,7 @@ export default function HostPage() {
                 <div className="truncate text-sm text-[#5a6a84]">
                   {active.bank || "—"} · {active.branch || "—"} · {active.groupId || "—"} · {active.memberId || "—"}
                 </div>
-                <div className={`truncate text-xs ${hasCoordinates(active) ? "text-[#29416f]" : "text-[#c2380f]"}`}>
+                <div className={`truncate text-xs ${hasCoordinates(active) ? "text-[#29416f]" : "text-[#005792]"}`}>
                   {geotagSummary(active)}
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function HostPage() {
               <p className="mt-2 max-w-sm text-sm text-[#9fb4d4]">Admit a field officer from the waiting room on the right. Their video fills this screen.</p>
               {waiting[0] ? (
                 <Button
-                  className="mt-5 bg-[#f7481c] hover:bg-[#d63a11]"
+                  className="mt-5 bg-[#005792] hover:bg-[#004675]"
                   disabled={!hasCoordinates(waiting[0])}
                   onClick={() => admit(waiting[0].id)}
                 >
@@ -295,13 +295,13 @@ export default function HostPage() {
             <div className="flex items-center gap-2 border-b px-3 py-3 text-[#29416f]">
               <UsersRound className="size-4" />
               <span className="font-semibold text-[#10264e]">Waiting room</span>
-              <span className="rounded-full bg-[#fff1e4] px-2 text-xs font-semibold text-[#c2380f]">{waiting.length}</span>
+              <span className="rounded-full bg-[#e5eef4] px-2 text-xs font-semibold text-[#005792]">{waiting.length}</span>
             </div>
             <div className="max-h-64 overflow-y-auto">
               {waiting.length === 0 ? <p className="p-4 text-center text-sm text-[#5a6a84]">No one is waiting.</p> : waiting.map((officer) => (
                 <div key={officer.id} className="border-b p-3 last:border-b-0">
                   <div className="flex items-start gap-2">
-                    <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-[#fff1e4] text-sm font-bold text-[#c2380f]">
+                    <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-[#e5eef4] text-sm font-bold text-[#005792]">
                       {tokenLabel(officer.tokenNumber)}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -309,14 +309,14 @@ export default function HostPage() {
                       <div className="text-xs text-[#5a6a84]">{officer.bank || "—"} · {officer.branch || "—"} · {officer.groupId || "—"} · {officer.memberId || "—"}</div>
                     </div>
                   </div>
-                  <div className={`mt-1 text-xs ${hasCoordinates(officer) ? "text-[#29416f]" : "text-[#c2380f]"}`}>
+                  <div className={`mt-1 text-xs ${hasCoordinates(officer) ? "text-[#29416f]" : "text-[#005792]"}`}>
                     {hasCoordinates(officer)
                       ? geotagSummary(officer)
                       : "Waiting for GPS. Admit is blocked until they allow location."}
                   </div>
                   <div className="mt-1 flex items-center gap-1 text-xs text-[#5a6a84]"><Clock className="size-3" /> {waitEstimateLabel(officer.estimatedWaitMinutes)} · in queue <WaitingTimer startedAt={officer.createdAt} /></div>
                   <div className="mt-2 flex gap-2">
-                    <Button className="flex-1 bg-[#f7481c] hover:bg-[#d63a11]" size="sm" disabled={Boolean(active) || admitting === officer.id || !hasCoordinates(officer)} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : hasCoordinates(officer) ? "Admit" : "Waiting for GPS"}</Button>
+                    <Button className="flex-1 bg-[#005792] hover:bg-[#004675]" size="sm" disabled={Boolean(active) || admitting === officer.id || !hasCoordinates(officer)} onClick={() => admit(officer.id)}>{admitting === officer.id ? "Admitting…" : hasCoordinates(officer) ? "Admit" : "Waiting for GPS"}</Button>
                     <Button variant="outline" size="icon-sm" title="Private message" onClick={() => { setChatTarget(officer.id); setUnread((u) => ({ ...u, [officer.id]: 0 })); }}><MessageSquare /></Button>
                     <Button variant="outline" size="icon-sm" title="Decline" className="text-destructive" onClick={() => deny(officer.id)}><UserRoundX /></Button>
                   </div>
@@ -328,14 +328,14 @@ export default function HostPage() {
             <div className="border-b px-3 py-3">
               <div className="font-semibold text-[#10264e]">Chat</div>
               <div className="mt-2 flex gap-1 overflow-x-auto">
-                <button className={`rounded-full px-3 py-1 text-xs font-semibold ${chatTarget === "all" ? "bg-[#10264e] text-white" : "border"}`} onClick={() => { setChatTarget("all"); setUnread((u) => ({ ...u, all: 0 })); }}>Everyone</button>
-                {waiting.map((officer) => <button key={officer.id} className={`rounded-full px-3 py-1 text-xs font-semibold ${chatTarget === officer.id ? "bg-[#10264e] text-white" : "border"}`} onClick={() => { setChatTarget(officer.id); setUnread((u) => ({ ...u, [officer.id]: 0 })); }}>{officer.displayName.split(" ")[0]}</button>)}
+                <button className={`rounded-full px-3 py-1 text-xs font-semibold ${chatTarget === "all" ? "bg-[#005792] text-white" : "border"}`} onClick={() => { setChatTarget("all"); setUnread((u) => ({ ...u, all: 0 })); }}>Everyone</button>
+                {waiting.map((officer) => <button key={officer.id} className={`rounded-full px-3 py-1 text-xs font-semibold ${chatTarget === officer.id ? "bg-[#005792] text-white" : "border"}`} onClick={() => { setChatTarget(officer.id); setUnread((u) => ({ ...u, [officer.id]: 0 })); }}>{officer.displayName.split(" ")[0]}</button>)}
               </div>
             </div>
             <div className="min-h-0 flex-1 space-y-2 overflow-y-auto bg-[#fafbfd] p-3">
               {visibleMessages.length === 0 ? <p className="text-center text-xs text-[#5a6a84]">No messages in this conversation.</p> : visibleMessages.map((message) => (
                 <div key={message.id} className={`flex ${message.senderRole !== "FieldGuest" ? "justify-end" : ""}`}>
-                  <div className={`max-w-[86%] rounded-xl px-3 py-2 text-sm ${message.senderRole !== "FieldGuest" ? "bg-[#10264e] text-white" : "border bg-white text-[#10264e]"}`}>
+                  <div className={`max-w-[86%] rounded-xl px-3 py-2 text-sm ${message.senderRole !== "FieldGuest" ? "bg-[#005792] text-white" : "border bg-white text-[#10264e]"}`}>
                     <div className="text-[11px] font-semibold opacity-70">{message.senderRole !== "FieldGuest" ? "You" : message.senderName}</div>
                     <div>{message.body}</div>
                     <div className="mt-1 text-right text-[10px] opacity-60">{new Date(message.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
@@ -345,7 +345,7 @@ export default function HostPage() {
             </div>
             <form onSubmit={sendChat} className="flex gap-2 border-t p-2">
               <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={`Message ${chatTarget === "all" ? "everyone" : waiting.find((w) => w.id === chatTarget)?.displayName ?? "officer"}…`} disabled={waiting.length === 0} />
-              <Button type="submit" className="bg-[#10264e]" disabled={waiting.length === 0}>Send</Button>
+              <Button type="submit" className="bg-[#005792] hover:bg-[#004675]" disabled={waiting.length === 0}>Send</Button>
             </form>
           </section>
         </aside>

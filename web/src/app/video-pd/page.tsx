@@ -28,10 +28,10 @@ export default function VideoPdPage() {
     api.meetings().then(setRecords).catch((err) => setError(err.message));
   }, [user]);
 
-  if (loading || !user) return <div className="min-h-full bg-[#eef1f6] p-8 text-[#5a6a84]">Loading Video PD…</div>;
+  if (loading || !user) return <div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Loading Video PD…</div>;
 
   return (
-    <div className="min-h-full bg-[#eef1f6]">
+    <div className="min-h-full bg-[#f0f2f5]">
       <AppHeader />
       <main className="mx-auto max-w-7xl px-4 py-6">
         <h1 className="font-heading text-2xl font-semibold text-[#10264e]">Video PD</h1>
@@ -46,7 +46,7 @@ export default function VideoPdPage() {
             {records.map((pd) => (
               <Card key={pd.id} className="border border-[#d7deea] bg-white">
                 <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-[#fff1e4] text-[#f7481c]">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-[#e5eef4] text-[#005792]">
                     <Video className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
