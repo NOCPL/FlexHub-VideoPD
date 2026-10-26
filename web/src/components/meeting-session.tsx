@@ -31,6 +31,13 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api";
 import { decodeCallSignal, encodeCallSignal } from "@/lib/call-signal";
 import { captureVideoFrame } from "@/lib/crop";
@@ -140,11 +147,12 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
   const remoteTrack = cameraTracks.find((track) => !track.participant.isLocal);
   const mainTrack = remoteTrack ?? selfTrack;
 
-  function capture() {
-    if (!snapshotCategory) {
+  function capture(category: string) {
+    if (!category) {
       toast.error("Select House Image or KYC before capturing.");
       return;
     }
+    setSnapshotCategory(category);
     const videos = stageRef.current?.querySelectorAll("video") ?? [];
     const preferred =
       Array.from(videos).find((v) => {
@@ -337,23 +345,22 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
               <MonitorUp />
               Share
             </Button>
-            <select
-              aria-label="Image category"
-              value={snapshotCategory}
-              onChange={(e) => setSnapshotCategory(e.target.value)}
-              className="h-9 rounded-lg border border-white/20 bg-[#132a50] px-2 text-sm text-white"
-            >
-              <option value="">Image type</option>
-              {SNAPSHOT_CATEGORIES.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            <Button variant="secondary" onClick={capture}>
-              <Camera />
-              Capture still
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary">
+                  <Camera />
+                  Capture still
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="center" className="z-[80] min-w-48">
+                <DropdownMenuLabel>Choose image type</DropdownMenuLabel>
+                {SNAPSHOT_CATEGORIES.map((item) => (
+                  <DropdownMenuItem key={item} onSelect={() => capture(item)}>
+                    {item}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="destructive" onClick={endVideoPd} disabled={ending}>
               <PhoneOff />
               {ending ? "Ending…" : "End PD"}

@@ -103,15 +103,12 @@ public class LobbyService(
             .FirstOrDefaultAsync(w =>
                 w.HostSlug == officer.HostSlug &&
                 (w.Status == WaitingStatuses.Admitted || w.Status == WaitingStatuses.Connected));
-        var chat = await db.LobbyMessages
-            .Where(m => m.HostSlug == officer.HostSlug)
-            .ToListAsync();
         return new HostLobbyDto(
             meetings.Mapper.ToUser(officer),
             meeting is null ? null : meetings.Mapper.ToDetail(meeting),
             NumberWaiting(waiting),
             active is null ? null : ToDto(active, 1, 0),
-            chat.OrderBy(m => m.SentAt).Select(ToChat).ToList());
+            await GetHostChatAsync(officer.HostSlug ?? ""));
     }
 
     public async Task<WaitResponse> EnqueueAsync(JoinMeetingRequest request)
@@ -148,15 +145,65 @@ public class LobbyService(
 
     public async Task<IReadOnlyList<LobbyMessageDto>> GetChatAsync(WaitingOfficer waiting, bool host)
     {
-        var query = db.LobbyMessages.Where(m => m.HostSlug == waiting.HostSlug);
-        if (!host)
+        if (host)
         {
-            query = query.Where(m =>
-                m.RecipientWaitingOfficerId == null ||
-                m.RecipientWaitingOfficerId == waiting.Id);
+            return await GetHostChatAsync(waiting.HostSlug);
         }
-        var messages = await query.ToListAsync();
-        return messages.OrderBy(m => m.SentAt).Select(ToChat).ToList();
+
+        var messages = await db.LobbyMessages
+            .Where(m => m.HostSlug == waiting.HostSlug)
+            .ToListAsync();
+        return messages
+            .Where(m =>
+                m.SentAt >= waiting.CreatedAt &&
+                (m.RecipientWaitingOfficerId is null || m.RecipientWaitingOfficerId == waiting.Id))
+            .OrderBy(m => m.SentAt)
+            .Select(ToChat)
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<LobbyMessageDto>> GetHostChatAsync(string slug)
+    {
+        var waiting = await ListWaitingAsync(slug);
+        if (waiting.Count == 0)
+        {
+            return [];
+        }
+
+        var waitingIds = waiting.Select(w => w.Id).ToHashSet();
+        var earliest = waiting.Min(w => w.CreatedAt);
+        var messages = await db.LobbyMessages.Where(m => m.HostSlug == slug).ToListAsync();
+        return messages
+            .Where(m =>
+                (m.RecipientWaitingOfficerId is Guid recipient && waitingIds.Contains(recipient))
+                || (m.RecipientWaitingOfficerId is null && m.SentAt >= earliest))
+            .OrderBy(m => m.SentAt)
+            .Select(ToChat)
+            .ToList();
+    }
+
+    public async Task ClearClosedVisitChatAsync(string slug)
+    {
+        var remaining = await ListWaitingAsync(slug);
+        var messages = await db.LobbyMessages.Where(m => m.HostSlug == slug).ToListAsync();
+        if (remaining.Count == 0)
+        {
+            if (messages.Count == 0) return;
+            db.LobbyMessages.RemoveRange(messages);
+            await db.SaveChangesAsync();
+            return;
+        }
+
+        var waitingIds = remaining.Select(w => w.Id).ToHashSet();
+        var earliest = remaining.Min(w => w.CreatedAt);
+        var stale = messages
+            .Where(m =>
+                (m.RecipientWaitingOfficerId is Guid recipient && !waitingIds.Contains(recipient))
+                || (m.RecipientWaitingOfficerId is null && m.SentAt < earliest))
+            .ToList();
+        if (stale.Count == 0) return;
+        db.LobbyMessages.RemoveRange(stale);
+        await db.SaveChangesAsync();
     }
 
     public async Task<LobbyMessageDto> PostChatAsync(

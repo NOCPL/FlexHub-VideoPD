@@ -78,6 +78,11 @@ public class NotificationService(IHubContext<NotificationHub> hub)
             hub.Clients.Group($"host:{slug}").SendAsync("queueShifted"),
             hub.Clients.Group($"lobby:{slug}").SendAsync("queueShifted"));
 
+    public Task LobbyChatClearedAsync(string slug) =>
+        Task.WhenAll(
+            hub.Clients.Group($"host:{slug}").SendAsync("lobbyChatCleared"),
+            hub.Clients.Group($"lobby:{slug}").SendAsync("lobbyChatCleared"));
+
     public Task WaitingLeftAsync(string slug, Guid waitingId) =>
         Task.WhenAll(
             hub.Clients.Group($"host:{slug}").SendAsync("waitingLeft", waitingId),

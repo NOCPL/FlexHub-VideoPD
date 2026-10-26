@@ -14,7 +14,9 @@ namespace VisitMeet.Api.Controllers;
 [Authorize]
 public class MeetingsController(
     AppDbContext db,
-    MeetingService meetings) : ControllerBase
+    MeetingService meetings,
+    LobbyService lobby,
+    NotificationService notifications) : ControllerBase
 {
     private Task<User?> CurrentUserAsync() => db.Users.FindAsync(User.GetUserId()).AsTask();
 
@@ -80,6 +82,12 @@ public class MeetingsController(
         var meeting = await meetings.LoadAsync(id);
         if (!CanAccess(meeting)) return Forbid();
         await meetings.CompleteAsync(meeting);
+        var slug = meeting.CreditOfficer?.HostSlug;
+        if (!string.IsNullOrWhiteSpace(slug))
+        {
+            await lobby.ClearClosedVisitChatAsync(slug);
+            await notifications.LobbyChatClearedAsync(slug);
+        }
         return meetings.Mapper.ToDetail(await meetings.LoadAsync(id));
     }
 

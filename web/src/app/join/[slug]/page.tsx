@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { api, ApiError, getToken, hubUrl, setGuestToken } from "@/lib/api";
 import { hasCoordinates, gpsRequiredMessage } from "@/lib/geotag";
 import { GpsRequiredError, readPhoneGps, useFieldOfficerGeotag } from "@/hooks/use-field-officer-geotag";
+import { useStickToBottom } from "@/hooks/use-stick-to-bottom";
 import { MINUTES_PER_TOKEN, tokenLabel, waitEstimateLabel } from "@/lib/queue";
 import type { JoinTokenResponse, LobbyMessage, User, WaitingOfficer } from "@/lib/types";
 
@@ -72,6 +73,7 @@ function JoinBody() {
   async function join() {
     setBusy(true);
     setError(null);
+    setMessages([]);
     try {
       const fix = await readPhoneGps();
       const result = await api.join({ slug, bank, branch, groupId, memberId, displayName: name });
@@ -135,6 +137,9 @@ function JoinBody() {
       .configureLogging(LogLevel.Warning)
       .build();
 
+    connection.on("lobbyChatCleared", () => {
+      setMessages([]);
+    });
     connection.on("lobbyChat", (message: LobbyMessage) => {
       setMessages((current) => current.some((m) => m.id === message.id) ? current : [...current, message]);
       if (message.recipientWaitingOfficerId) setChatTarget("private");
@@ -298,6 +303,14 @@ function JoinBody() {
     );
   }
 
+  const visibleMessages = (messages ?? []).filter((message) =>
+    chatTarget === "all"
+      ? message.recipientWaitingOfficerId === null
+      : message.recipientWaitingOfficerId === waiting?.id);
+  const chatEndRef = useStickToBottom(
+    `${chatTarget}:${visibleMessages.at(-1)?.id ?? "empty"}:${visibleMessages.length}`,
+  );
+
   if (callEnded) {
     return (
       <main className="flex min-h-full w-full items-center justify-center bg-[#f0f2f5] px-4 py-10">
@@ -357,10 +370,6 @@ function JoinBody() {
   }
 
   if (waiting) {
-    const visibleMessages = (messages ?? []).filter((message) =>
-      chatTarget === "all"
-        ? message.recipientWaitingOfficerId === null
-        : message.recipientWaitingOfficerId === waiting.id);
     const tokenNumber = waiting.tokenNumber;
     const waitMinutes = waiting.estimatedWaitMinutes;
     return (
@@ -423,6 +432,7 @@ function JoinBody() {
                   </div>
                 ))
               )}
+              <div ref={chatEndRef} />
             </div>
             <form onSubmit={sendChat} className="mt-3 flex gap-2">
               <Input

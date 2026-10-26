@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useStickToBottom } from "@/hooks/use-stick-to-bottom";
 import { useParams, useRouter } from "next/navigation";
 import { HttpTransportType, HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { Clock, MessageSquare, UserRoundX, UsersRound, VideoOff } from "lucide-react";
@@ -116,9 +117,21 @@ export default function HostPage() {
         return next;
       });
     });
+    connection.on("lobbyChatCleared", () => {
+      setMessages([]);
+    });
     connection.on("activeEnded", (waitingId: string) => {
       setActive((current) => current?.id === waitingId ? null : current);
       setSession(null);
+      void api
+        .hostCurrent(slug)
+        .then((lobby) => {
+          setWaiting(lobby.waiting ?? []);
+          setMessages(lobby.chat ?? []);
+          if (lobby.active) setActive(lobby.active);
+          else setActive(null);
+        })
+        .catch(() => undefined);
     });
     connection.on("activeConnected", (waitingId: string, connectedAt: string) => {
       setActive((current) =>
@@ -137,6 +150,7 @@ export default function HostPage() {
         .hostCurrent(slug)
         .then((lobby) => {
           setWaiting(lobby.waiting ?? []);
+          setMessages(lobby.chat ?? []);
           if (lobby.active) setActive(lobby.active);
           else setActive(null);
         })
@@ -161,7 +175,9 @@ export default function HostPage() {
         .hostCurrent(slug)
         .then((lobby) => {
           setWaiting(lobby.waiting ?? []);
+          setMessages(lobby.chat ?? []);
           if (lobby.active) setActive(lobby.active);
+          else setActive(null);
         })
         .catch(() => undefined);
     }, 4000);
@@ -227,6 +243,14 @@ export default function HostPage() {
     }
   }
 
+  const visibleMessages = (messages ?? []).filter((message) =>
+    chatTarget === "all"
+      ? message.recipientWaitingOfficerId === null
+      : message.recipientWaitingOfficerId === chatTarget);
+  const chatEndRef = useStickToBottom(
+    `${chatTarget}:${visibleMessages.at(-1)?.id ?? "empty"}:${visibleMessages.length}`,
+  );
+
   if (loading || !user) {
     return <div className="min-h-full bg-[#f0f2f5] p-8 text-[#5a6a84]">Checking your session…</div>;
   }
@@ -239,11 +263,6 @@ export default function HostPage() {
       </div>
     );
   }
-
-  const visibleMessages = (messages ?? []).filter((message) =>
-    chatTarget === "all"
-      ? message.recipientWaitingOfficerId === null
-      : message.recipientWaitingOfficerId === chatTarget);
 
   return (
     <div className="flex h-dvh flex-col bg-[#f0f2f5]">
@@ -270,7 +289,17 @@ export default function HostPage() {
               meeting={session.meeting}
               user={user}
               fieldOfficer={active}
-              onLeave={() => setSession(null)}
+              onLeave={() => {
+                setSession(null);
+                void api
+                  .hostCurrent(slug)
+                  .then((lobby) => {
+                    setWaiting(lobby.waiting ?? []);
+                    setMessages(lobby.chat ?? []);
+                    setActive(lobby.active ?? null);
+                  })
+                  .catch(() => undefined);
+              }}
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center rounded-2xl bg-[radial-gradient(120%_90%_at_50%_15%,#16315c_0%,#0b1b36_60%,#08142a_100%)] px-6 text-center text-white">
@@ -342,6 +371,7 @@ export default function HostPage() {
                   </div>
                 </div>
               ))}
+              <div ref={chatEndRef} />
             </div>
             <form onSubmit={sendChat} className="flex gap-2 border-t p-2">
               <Input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={`Message ${chatTarget === "all" ? "everyone" : waiting.find((w) => w.id === chatTarget)?.displayName ?? "officer"}…`} disabled={waiting.length === 0} />
