@@ -126,7 +126,8 @@ public class MeetingsController(
         [FromForm] int? cropX,
         [FromForm] int? cropY,
         [FromForm] int? cropWidth,
-        [FromForm] int? cropHeight)
+        [FromForm] int? cropHeight,
+        [FromForm] string? category)
     {
         if (file is null || file.Length == 0)
         {
@@ -134,13 +135,16 @@ public class MeetingsController(
         }
         var meeting = await meetings.LoadAsync(id);
         if (!CanAccess(meeting)) return Forbid();
-        var snapshot = await meetings.SaveSnapshotAsync(meeting, User.GetUserId(), file, cropX, cropY, cropWidth, cropHeight);
-        var dto = new SnapshotDto(
-            snapshot.Id, snapshot.Bank, snapshot.Branch, snapshot.GroupId, snapshot.MemberId,
-            $"/api/meetings/{meeting.Id}/snapshots/{snapshot.Id}/file",
-            snapshot.CropX, snapshot.CropY, snapshot.CropWidth, snapshot.CropHeight, snapshot.CreatedAt,
-            snapshot.Latitude, snapshot.Longitude, snapshot.AccuracyMeters, snapshot.GeoCapturedAt, snapshot.GeoError);
-        return Created(dto.Url, dto);
+        try
+        {
+            var snapshot = await meetings.SaveSnapshotAsync(
+                meeting, User.GetUserId(), file, cropX, cropY, cropWidth, cropHeight, category);
+            return Created($"/api/meetings/{meeting.Id}/snapshots/{snapshot.Id}/file", meetings.Mapper.ToSnapshot(meeting, snapshot));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpGet("{id:guid}/snapshots/{snapshotId:guid}/file")]

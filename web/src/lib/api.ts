@@ -161,13 +161,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ body }),
     }),
-  uploadSnapshot: (id: string, file: Blob, crop: { x: number; y: number; width: number; height: number }) => {
+  uploadSnapshot: (
+    id: string,
+    file: Blob,
+    crop: { x: number; y: number; width: number; height: number },
+    category: string,
+  ) => {
     const form = new FormData();
     form.append("file", file, "capture.png");
     form.append("cropX", String(Math.round(crop.x)));
     form.append("cropY", String(Math.round(crop.y)));
     form.append("cropWidth", String(Math.round(crop.width)));
     form.append("cropHeight", String(Math.round(crop.height)));
+    form.append("category", category);
     return request<Snapshot>(`/api/meetings/${id}/snapshots`, { method: "POST", body: form });
   },
 };

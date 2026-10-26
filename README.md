@@ -23,6 +23,8 @@ Each credit officer gets a **permanent host slug** at user creation (unguessable
 
 `recordings/{bank}/{branch}/{groupId}/{memberId}/{meetingId}/seg-{n}.mp4`
 
+**Captured stills:** credit officer picks House Image 1–3 or KYC 1–3, then Capture still. The crop keeps GPS and time on the pixels. The saved file is `{groupId}_{memberId}_{House_Image_1}.png` (spaces in the category become underscores). A second capture of the same category appends `_2`.
+
 ## Demo accounts
 
 | Role | Email | Password | Static host URL |

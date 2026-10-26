@@ -73,6 +73,8 @@ public record SnapshotDto(
     string Branch,
     string GroupId,
     string MemberId,
+    string Category,
+    string FileName,
     string Url,
     int? CropX,
     int? CropY,

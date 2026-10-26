@@ -97,6 +97,7 @@ public class Snapshot
     public string Branch { get; set; } = "";
     public string GroupId { get; set; } = "";
     public string MemberId { get; set; } = "";
+    public string Category { get; set; } = "";
     public string FileName { get; set; } = "";
     public string ContentType { get; set; } = "image/png";
     public int? CropX { get; set; }

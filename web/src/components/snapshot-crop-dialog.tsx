@@ -14,12 +14,22 @@ import {
 import { api } from "@/lib/api";
 import { getCroppedPng } from "@/lib/crop";
 import { geotagSummary, type FieldGeotag } from "@/lib/geotag";
+import { SNAPSHOT_CATEGORIES } from "@/lib/snapshot-categories";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {
   meetingId: string;
   fieldOfficerId?: string | null;
   geotag?: FieldGeotag | null;
   imageSrc: string | null;
+  category: string;
+  onCategoryChange: (category: string) => void;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -29,6 +39,8 @@ export function SnapshotCropDialog({
   fieldOfficerId,
   geotag,
   imageSrc,
+  category,
+  onCategoryChange,
   onClose,
   onSaved,
 }: Props) {
@@ -44,6 +56,10 @@ export function SnapshotCropDialog({
 
   async function save() {
     if (!imageSrc || !area) return;
+    if (!category) {
+      setError("Select House Image or KYC before saving.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -57,7 +73,7 @@ export function SnapshotCropDialog({
         }
       }
       const blob = await getCroppedPng(imageSrc, area, stamp);
-      await api.uploadSnapshot(meetingId, blob, area);
+      await api.uploadSnapshot(meetingId, blob, area, category);
       onSaved();
       onClose();
     } catch (err) {
@@ -73,9 +89,26 @@ export function SnapshotCropDialog({
         <DialogHeader>
           <DialogTitle>Crop evidence still</DialogTitle>
           <DialogDescription>
-            The field officer’s phone GPS and time are printed on the saved image.
+            GPS and time are printed on the image. The file is saved as group, member, and this category.
           </DialogDescription>
         </DialogHeader>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-[#10264e]" htmlFor="snapshot-category">
+            Image category
+          </label>
+          <Select value={category || undefined} onValueChange={onCategoryChange}>
+            <SelectTrigger id="snapshot-category" className="w-full">
+              <SelectValue placeholder="Select House Image or KYC" />
+            </SelectTrigger>
+            <SelectContent>
+              {SNAPSHOT_CATEGORIES.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {item}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="relative h-80 overflow-hidden rounded-lg bg-black">
           {imageSrc ? (
             <Cropper
@@ -107,7 +140,7 @@ export function SnapshotCropDialog({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={save} disabled={saving || !area}>
+          <Button onClick={save} disabled={saving || !area || !category}>
             {saving ? "Saving…" : "Save cropped still"}
           </Button>
         </DialogFooter>

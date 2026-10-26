@@ -56,6 +56,8 @@ export type Snapshot = {
   branch: string;
   groupId: string;
   memberId: string;
+  category: string;
+  fileName: string;
   url: string;
   cropX: number | null;
   cropY: number | null;

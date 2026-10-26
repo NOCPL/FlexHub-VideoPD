@@ -35,6 +35,7 @@ import { api } from "@/lib/api";
 import { decodeCallSignal, encodeCallSignal } from "@/lib/call-signal";
 import { captureVideoFrame } from "@/lib/crop";
 import type { MeetingDetail, User, WaitingOfficer } from "@/lib/types";
+import { SNAPSHOT_CATEGORIES } from "@/lib/snapshot-categories";
 import { SnapshotCropDialog } from "@/components/snapshot-crop-dialog";
 
 type Props = {
@@ -71,6 +72,7 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [captureSrc, setCaptureSrc] = useState<string | null>(null);
+  const [snapshotCategory, setSnapshotCategory] = useState("");
   const [ending, setEnding] = useState(false);
   const [flipping, setFlipping] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -139,6 +141,10 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
   const mainTrack = remoteTrack ?? selfTrack;
 
   function capture() {
+    if (!snapshotCategory) {
+      toast.error("Select House Image or KYC before capturing.");
+      return;
+    }
     const videos = stageRef.current?.querySelectorAll("video") ?? [];
     const preferred =
       Array.from(videos).find((v) => {
@@ -331,6 +337,19 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
               <MonitorUp />
               Share
             </Button>
+            <select
+              aria-label="Image category"
+              value={snapshotCategory}
+              onChange={(e) => setSnapshotCategory(e.target.value)}
+              className="h-9 rounded-lg border border-white/20 bg-[#132a50] px-2 text-sm text-white"
+            >
+              <option value="">Image type</option>
+              {SNAPSHOT_CATEGORIES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
             <Button variant="secondary" onClick={capture}>
               <Camera />
               Capture still
@@ -353,8 +372,10 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
         fieldOfficerId={fieldOfficer?.id}
         geotag={fieldOfficer}
         imageSrc={captureSrc}
+        category={snapshotCategory}
+        onCategoryChange={setSnapshotCategory}
         onClose={() => setCaptureSrc(null)}
-        onSaved={() => toast.success("Cropped still saved with the field officer’s GPS and time.")}
+        onSaved={() => toast.success(`${snapshotCategory} saved as group, member, and category.`)}
       />
     </div>
   );

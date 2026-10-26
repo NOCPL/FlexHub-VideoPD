@@ -60,6 +60,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Snapshot>(e =>
         {
+            e.Property(x => x.Category).HasMaxLength(64);
+            e.Property(x => x.FileName).HasMaxLength(200);
             e.Property(x => x.GeoError).HasMaxLength(120);
         });
 

@@ -67,14 +67,17 @@ public class MeetingMapper(IConfiguration config)
             m.Recordings.OrderBy(r => r.Sequence).Select(r => new RecordingDto(
                 r.Id, r.Status, r.Sequence, r.Bank, r.Branch, r.GroupId, r.MemberId,
                 r.FilePath, r.DurationSeconds, r.Error, r.CreatedAt, r.JoinedAt, r.LeftAt)).ToList(),
-            m.Snapshots.OrderByDescending(s => s.CreatedAt).Select(s => new SnapshotDto(
-                s.Id, s.Bank, s.Branch, s.GroupId, s.MemberId,
-                $"/api/meetings/{m.Id}/snapshots/{s.Id}/file",
-                s.CropX, s.CropY, s.CropWidth, s.CropHeight, s.CreatedAt,
-                s.Latitude, s.Longitude, s.AccuracyMeters, s.GeoCapturedAt, s.GeoError)).ToList(),
+            m.Snapshots.OrderByDescending(s => s.CreatedAt).Select(s => ToSnapshot(m, s)).ToList(),
             m.ChatMessages.OrderBy(c => c.SentAt).Select(c => new ChatMessageDto(
                 c.Id, c.SenderUserId, c.SenderName, c.SenderRole, c.Body, c.SentAt)).ToList());
     }
+
+    public SnapshotDto ToSnapshot(Meeting m, Snapshot s) =>
+        new(
+            s.Id, s.Bank, s.Branch, s.GroupId, s.MemberId, s.Category, s.FileName,
+            $"/api/meetings/{m.Id}/snapshots/{s.Id}/file",
+            s.CropX, s.CropY, s.CropWidth, s.CropHeight, s.CreatedAt,
+            s.Latitude, s.Longitude, s.AccuracyMeters, s.GeoCapturedAt, s.GeoError);
 
     public static IQueryable<Meeting> WithGraph(IQueryable<Meeting> query) =>
         query
@@ -466,19 +469,37 @@ public class MeetingService(
         }
     }
 
+    public static readonly string[] SnapshotCategories =
+    [
+        "House Image 1",
+        "House Image 2",
+        "House Image 3",
+        "KYC 1",
+        "KYC 2",
+        "KYC 3"
+    ];
+
     public async Task<Snapshot> SaveSnapshotAsync(
         Meeting meeting,
         Guid capturedBy,
         IFormFile file,
-        int? cropX, int? cropY, int? cropW, int? cropH)
+        int? cropX, int? cropY, int? cropW, int? cropH,
+        string? category)
     {
+        var label = (category ?? "").Trim();
+        if (!SnapshotCategories.Contains(label, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Select House Image 1–3 or KYC 1–3.");
+        }
+        label = SnapshotCategories.First(c => string.Equals(c, label, StringComparison.OrdinalIgnoreCase));
+
         var uploads = config["Storage:UploadsPath"] ?? "/workspace/data/uploads";
         var dir = Path.Combine(uploads, "snapshots", meeting.Id.ToString("N"));
         Directory.CreateDirectory(dir);
         var snapshotId = Guid.NewGuid();
         var ext = Path.GetExtension(file.FileName);
         if (string.IsNullOrEmpty(ext) || ext.Length > 5) ext = ".png";
-        var fileName = $"{snapshotId:N}{ext}";
+        var fileName = UniqueSnapshotFileName(dir, meeting.GroupId, meeting.MemberId, label, ext);
         var path = Path.Combine(dir, fileName);
         await using (var stream = File.Create(path))
         {
@@ -501,6 +522,7 @@ public class MeetingService(
             Branch = meeting.Branch,
             GroupId = meeting.GroupId,
             MemberId = meeting.MemberId,
+            Category = label,
             FileName = fileName,
             ContentType = string.IsNullOrEmpty(file.ContentType) ? "image/png" : file.ContentType,
             CropX = cropX,
@@ -524,5 +546,27 @@ public class MeetingService(
     {
         var uploads = config["Storage:UploadsPath"] ?? "/workspace/data/uploads";
         return Path.Combine(uploads, "snapshots", meeting.Id.ToString("N"), snapshot.FileName);
+    }
+
+    private static string UniqueSnapshotFileName(
+        string dir, string groupId, string memberId, string category, string ext)
+    {
+        var baseName = $"{SafeFilePart(groupId)}_{SafeFilePart(memberId)}_{SafeFilePart(category)}";
+        var fileName = $"{baseName}{ext}";
+        for (var n = 2; File.Exists(Path.Combine(dir, fileName)); n++)
+        {
+            fileName = $"{baseName}_{n}{ext}";
+        }
+        return fileName;
+    }
+
+    private static string SafeFilePart(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "_";
+        foreach (var c in Path.GetInvalidFileNameChars())
+        {
+            value = value.Replace(c, '_');
+        }
+        return value.Trim().Replace(' ', '_').Replace('/', '_').Replace('\\', '_');
     }
 }

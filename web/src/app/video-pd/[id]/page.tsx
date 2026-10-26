@@ -88,13 +88,13 @@ export default function VideoPdDetailPage() {
               <CardHeader>
                 <CardTitle className="text-[#10264e]">Captured stills</CardTitle>
                 <CardDescription className="text-[#5a6a84]">
-                  Each still is stamped with the field officer’s phone GPS and time.
+                  Files are named group, member, and category. GPS and time are stamped on the image.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {pd.snapshots.length === 0 ? (
                   <p className="text-sm text-[#5a6a84]">
-                    No stills yet. During the call, tap Capture still. The saved crop shows the field officer’s coordinates and Kolkata time.
+                    No stills yet. During the call, choose House Image or KYC, then capture. The file name uses group, member, and that category.
                   </p>
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -103,10 +103,12 @@ export default function VideoPdDetailPage() {
                       return (
                         <figure key={still.id} className="overflow-hidden rounded-lg border border-[#d7deea]">
                           <div className="aspect-[3/4] bg-[#0b1b36]">
-                            <AuthImage src={still.url} alt={`Still captured ${formatKolkata(still.createdAt)}`} className="h-full w-full object-cover" />
+                            <AuthImage src={still.url} alt={still.category || `Still captured ${formatKolkata(still.createdAt)}`} className="h-full w-full object-cover" />
                           </div>
                           <figcaption className="space-y-1 p-3 text-sm">
-                            <div className="font-medium text-[#10264e]">{geotagSummary(still)}</div>
+                            <div className="font-medium text-[#10264e]">{still.category || "Still"}</div>
+                            <div className="break-all font-mono text-xs text-[#29416f]">{still.fileName}</div>
+                            <div className="text-xs text-[#5a6a84]">{geotagSummary(still)}</div>
                             <div className="text-xs text-[#5a6a84]">
                               {still.bank} · {still.branch} · {still.groupId} · {still.memberId}
                             </div>
