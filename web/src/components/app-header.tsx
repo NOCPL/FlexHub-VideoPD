@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, CalendarPlus, ListVideo, Users, Video } from "lucide-react";
+import { Bell, CalendarPlus, ClipboardList, ListVideo, Users, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,6 +44,9 @@ export function AppHeader() {
             </Button>
             <Button variant="ghost" size="sm" asChild className="text-white hover:bg-white/10 hover:text-white">
               <Link href="/video-pd"><ListVideo /> Video PD</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild className="text-white hover:bg-white/10 hover:text-white">
+              <Link href="/assessment"><ClipboardList /> Assessment</Link>
             </Button>
           </nav>
         ) : null}

@@ -9,6 +9,13 @@ import type {
   MeetingListItem,
   Snapshot,
   User,
+  LoanCategory,
+  GuideListItem,
+  GuideDetail,
+  DeviationRule,
+  ApplicationListItem,
+  ApplicationDetail,
+  Applicant,
   WaitResponse,
   WaitingOfficer,
   WaitingRoom,
@@ -176,4 +183,67 @@ export const api = {
     form.append("category", category);
     return request<Snapshot>(`/api/meetings/${id}/snapshots`, { method: "POST", body: form });
   },
+  loanCategories: () => request<LoanCategory[]>("/api/assessment/categories"),
+  createLoanCategory: (body: { code: string; name: string; description?: string }) =>
+    request<LoanCategory>("/api/assessment/categories", { method: "POST", body: JSON.stringify(body) }),
+  updateLoanCategory: (id: string, body: { code: string; name: string; description?: string }) =>
+    request<LoanCategory>(`/api/assessment/categories/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  guides: () => request<GuideListItem[]>("/api/assessment/guides"),
+  guide: (id: string) => request<GuideDetail>(`/api/assessment/guides/${id}`),
+  createGuide: (body: { code: string; name: string; eventType: string; loanCategoryIds: string[]; status?: string }) =>
+    request<GuideDetail>("/api/assessment/guides", { method: "POST", body: JSON.stringify(body) }),
+  updateGuide: (id: string, body: { code: string; name: string; eventType: string; loanCategoryIds: string[]; status?: string }) =>
+    request<GuideDetail>(`/api/assessment/guides/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  saveGuideContent: (
+    id: string,
+    body: {
+      groups: { id?: string; name: string; sortOrder: number }[];
+      tasks: {
+        id?: string;
+        groupId?: string;
+        groupName: string;
+        number: number;
+        title: string;
+        description: string;
+        choices: string[];
+        allowMultiple: boolean;
+        conditionTaskNumber: number | null;
+        conditionChoices: string[];
+        ruleLink: string | null;
+        sortOrder: number;
+      }[];
+    },
+  ) => request<GuideDetail>(`/api/assessment/guides/${id}/content`, { method: "PUT", body: JSON.stringify(body) }),
+  cloneGuide: (id: string, body: { name: string; loanCategoryIds?: string[] }) =>
+    request<GuideDetail>(`/api/assessment/guides/${id}/clone`, { method: "POST", body: JSON.stringify(body) }),
+  deviationRules: () => request<DeviationRule[]>("/api/assessment/rules"),
+  updateDeviationRule: (
+    id: string,
+    body: {
+      description?: string;
+      severity?: string;
+      parameters?: unknown;
+      loanCategoryIds?: string[];
+      enabled?: boolean;
+      feedsTaskNumber?: number | null;
+    },
+  ) => request<DeviationRule>(`/api/assessment/rules/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  applications: () => request<ApplicationListItem[]>("/api/assessment/applications"),
+  application: (id: string) => request<ApplicationDetail>(`/api/assessment/applications/${id}`),
+  createApplication: (body: {
+    loanCategoryId: string;
+    displayName: string;
+    bank?: string;
+    branch?: string;
+    groupId?: string;
+    memberId?: string;
+    loanAmount?: number | null;
+    pan?: string;
+    phone?: string;
+    dateOfBirth?: string;
+  }) => request<ApplicationDetail>("/api/assessment/applications", { method: "POST", body: JSON.stringify(body) }),
+  addApplicant: (id: string, body: { role: string; name: string; pan?: string; phone?: string; dateOfBirth?: string }) =>
+    request<Applicant>(`/api/assessment/applications/${id}/applicants`, { method: "POST", body: JSON.stringify(body) }),
+  uploadApplicantInput: (id: string, body: { kind: string; provider?: string; fileName?: string; document: unknown }) =>
+    request<Applicant>(`/api/assessment/applicants/${id}/inputs`, { method: "POST", body: JSON.stringify(body) }),
 };

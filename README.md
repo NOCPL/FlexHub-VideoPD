@@ -141,9 +141,25 @@ Production: `videopd.nocpl.in` on **ALB + ACM**; `livekit.nocpl.in` and `turn.no
 
 Follow [infra/ec2/README.md](infra/ec2/README.md) for clone/pull, quoted SQLite env, systemd unit files, ALB/Caddy, and the three processes. This repo does not provision AWS for you.
 
+## Guided assessment (Phase 1)
+
+Admin configuration and JSON-driven flags. Not yet on the live call screen.
+
+| Screen | Who | What |
+| --- | --- | --- |
+| `/assessment` | Credit officer, admin | Applications, Equifax/AA JSON upload, fired flags with evidence |
+| `/assessment/guides` | Admin | Engagement guides: edit, reorder, clone/version |
+| `/assessment/rules` | Admin | 12 Conatus deviation rules — thresholds, severity, on/off |
+| `/assessment/categories` | Admin | Loan categories (Business LAP, JLG, …) |
+
+Seeded: Business LAP guide (100 tasks / 16 groups, including multi-select income sources on task 029 and conditional groups), 12 rules, and application `CAM31` (Meena Devi) with bureau + bank JSON already run.
+
+Sample files: `samples/assessment/equifax-meena.json` and `samples/assessment/aa-meena.json`.
+
 ## Layout
 
-- `api/VisitMeet.Api` — JWT auth, meetings, anonymous join, host tokens, webhooks, Egress, SignalR, SQLite
-- `web` — schedule-only dashboard, static host room, open join page, LiveKit call, chat, snapshot crop
+- `api/VisitMeet.Api` — JWT auth, meetings, anonymous join, host tokens, webhooks, Egress, SignalR, SQLite, assessment engine
+- `web` — schedule dashboard, host/join, LiveKit call, chat, snapshot crop, assessment admin
 - `infra/livekit` — Compose + YAML
 - `infra/ec2` — security group, env sample, systemd units, runbook
+- `samples/assessment` — Equifax and Account Aggregator JSON for rule-engine demos

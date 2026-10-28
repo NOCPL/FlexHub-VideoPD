@@ -12,6 +12,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<WaitingOfficer> WaitingOfficers => Set<WaitingOfficer>();
     public DbSet<LobbyMessage> LobbyMessages => Set<LobbyMessage>();
+    public DbSet<LoanCategory> LoanCategories => Set<LoanCategory>();
+    public DbSet<EngagementGuide> EngagementGuides => Set<EngagementGuide>();
+    public DbSet<GuideGroup> GuideGroups => Set<GuideGroup>();
+    public DbSet<GuideTask> GuideTasks => Set<GuideTask>();
+    public DbSet<DeviationRule> DeviationRules => Set<DeviationRule>();
+    public DbSet<AssessmentApplication> AssessmentApplications => Set<AssessmentApplication>();
+    public DbSet<Applicant> Applicants => Set<Applicant>();
+    public DbSet<ApplicantInput> ApplicantInputs => Set<ApplicantInput>();
+    public DbSet<RuleRun> RuleRuns => Set<RuleRun>();
+    public DbSet<RuleRunResult> RuleRunResults => Set<RuleRunResult>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +80,64 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => new { x.HostSlug, x.SentAt });
             e.Property(x => x.HostSlug).HasMaxLength(32);
             e.Property(x => x.Body).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<LoanCategory>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(64);
+            e.Property(x => x.Name).HasMaxLength(120);
+        });
+
+        modelBuilder.Entity<EngagementGuide>(e =>
+        {
+            e.HasIndex(x => new { x.Code, x.Version }).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(64);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Status).HasMaxLength(24);
+            e.HasMany(x => x.Groups).WithOne(x => x.Guide).HasForeignKey(x => x.GuideId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Tasks).WithOne(x => x.Guide).HasForeignKey(x => x.GuideId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<GuideGroup>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(120);
+        });
+
+        modelBuilder.Entity<GuideTask>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.HasOne(x => x.Group).WithMany(x => x.Tasks).HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DeviationRule>(e =>
+        {
+            e.Property(x => x.CheckKey).HasMaxLength(120);
+            e.Property(x => x.Name).HasMaxLength(120);
+            e.Property(x => x.Severity).HasMaxLength(24);
+        });
+
+        modelBuilder.Entity<AssessmentApplication>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(12);
+            e.Property(x => x.DisplayName).HasMaxLength(200);
+            e.HasOne(x => x.LoanCategory).WithMany().HasForeignKey(x => x.LoanCategoryId).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Applicants).WithOne(x => x.Application).HasForeignKey(x => x.ApplicationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Applicant>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Role).HasMaxLength(24);
+            e.HasMany(x => x.Inputs).WithOne(x => x.Applicant).HasForeignKey(x => x.ApplicantId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.RuleRuns).WithOne(x => x.Applicant).HasForeignKey(x => x.ApplicantId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RuleRun>(e =>
+        {
+            e.Property(x => x.Kind).HasMaxLength(32);
+            e.HasMany(x => x.Results).WithOne(x => x.RuleRun).HasForeignKey(x => x.RuleRunId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -1,0 +1,44 @@
+{
+  "provider": "account-aggregator",
+  "loanAmount": 900000,
+  "accounts": [
+    {
+      "accountNumber": "XXXX4521",
+      "type": "SAVINGS",
+      "openedAt": "2026-06-01"
+    }
+  ],
+  "transactions": [
+    {
+      "date": "2026-09-12",
+      "amount": 15000,
+      "direction": "debit",
+      "mode": "UPI",
+      "narration": "BETTING APP WALLET",
+      "risk": "gambling"
+    },
+    {
+      "date": "2026-09-08",
+      "amount": 12000,
+      "direction": "debit",
+      "mode": "cash",
+      "narration": "ATM CASH WDL",
+      "risk": "cash-heavy"
+    },
+    {
+      "date": "2026-08-28",
+      "amount": 6400,
+      "direction": "debit",
+      "mode": "NACH",
+      "narration": "BAJAJ FINANCE EMI",
+      "risk": null
+    },
+    {
+      "date": "2026-08-05",
+      "amount": 18000,
+      "direction": "debit",
+      "mode": "IMPS",
+      "narration": "STOCK PURCHASE KIRANA"
+    }
+  ]
+}

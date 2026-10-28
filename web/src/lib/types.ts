@@ -186,3 +186,128 @@ export const STATUS_LABEL: Record<string, string> = {
   Completed: "Completed",
   Cancelled: "Cancelled",
 };
+
+export type LoanCategory = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+};
+
+export type GuideListItem = {
+  id: string;
+  code: string;
+  name: string;
+  eventType: string;
+  version: number;
+  status: string;
+  loanCategoryIds: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type GuideGroup = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  taskCount: number;
+};
+
+export type GuideTask = {
+  id: string;
+  groupId: string;
+  number: number;
+  title: string;
+  description: string;
+  choices: string[];
+  allowMultiple: boolean;
+  conditionTaskNumber: number | null;
+  conditionChoices: string[];
+  ruleLink: string | null;
+  sortOrder: number;
+};
+
+export type GuideDetail = GuideListItem & {
+  groups: GuideGroup[];
+  tasks: GuideTask[];
+};
+
+export type DeviationRule = {
+  id: string;
+  checkKey: string;
+  name: string;
+  description: string;
+  severity: string;
+  parameters: Record<string, unknown>;
+  loanCategoryIds: string[];
+  enabled: boolean;
+  feedsTaskNumber: number | null;
+  updatedAt: string;
+};
+
+export type RuleFlag = {
+  id: string;
+  ruleId: string;
+  checkKey: string;
+  name: string;
+  severity: string;
+  fired: boolean;
+  evidence: { kind?: string; summary?: string; fields?: Record<string, string | null> }[];
+  feedsTaskNumber: number | null;
+};
+
+export type RuleRun = {
+  id: string;
+  kind: string;
+  ranAt: string;
+  results: RuleFlag[];
+};
+
+export type ApplicantInput = {
+  id: string;
+  kind: string;
+  provider: string;
+  fileName: string;
+  uploadedAt: string;
+};
+
+export type Applicant = {
+  id: string;
+  role: string;
+  name: string;
+  pan: string | null;
+  phone: string | null;
+  dateOfBirth: string | null;
+  inputs: ApplicantInput[];
+  ruleRuns: RuleRun[];
+};
+
+export type ApplicationListItem = {
+  id: string;
+  code: string;
+  displayName: string;
+  loanCategoryName: string;
+  bank: string;
+  branch: string;
+  groupId: string;
+  memberId: string;
+  loanAmount: number | null;
+  applicantCount: number;
+  firedFlagCount: number;
+  createdAt: string;
+};
+
+export type ApplicationDetail = {
+  id: string;
+  code: string;
+  displayName: string;
+  loanCategoryId: string;
+  loanCategoryName: string;
+  bank: string;
+  branch: string;
+  groupId: string;
+  memberId: string;
+  loanAmount: number | null;
+  createdAt: string;
+  applicants: Applicant[];
+};

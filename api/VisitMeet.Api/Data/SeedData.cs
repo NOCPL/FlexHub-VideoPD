@@ -50,5 +50,6 @@ public static class SeedData
         };
         db.Meetings.Add(meeting);
         await db.SaveChangesAsync();
+        await AssessmentSeed.EnsureSeededAsync(db, admin.Id);
     }
 }

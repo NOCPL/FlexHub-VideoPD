@@ -1,0 +1,36 @@
+{
+  "provider": "equifax",
+  "consumer": {
+    "name": "Meena Devi",
+    "pan": "ABCDE1234F",
+    "pans": ["ABCDE1234F", "ABCDE9999Z"],
+    "phone": "9876543210",
+    "phones": ["9876543210", "9123456789"],
+    "dob": "1988-03-12",
+    "dobs": ["1988-03-12", "1988-03-13"],
+    "score": 612
+  },
+  "accounts": [
+    {
+      "accountNumber": "XX4412",
+      "institution": "Bajaj Finance",
+      "status": "Written-Off",
+      "amount": 18500,
+      "reportedAt": "2026-02-10"
+    },
+    {
+      "accountNumber": "SB9981",
+      "institution": "SBI",
+      "status": "Active",
+      "amount": 42000,
+      "reportedAt": "2026-09-01",
+      "openedAt": "2019-04-01"
+    }
+  ],
+  "enquiries": [
+    { "institution": "HDFC Bank", "date": "2026-08-02", "amount": 300000 },
+    { "institution": "ICICI Bank", "date": "2026-07-18", "amount": 250000 },
+    { "institution": "Axis Bank", "date": "2026-06-21", "amount": 200000 },
+    { "institution": "IDFC First", "date": "2026-05-09", "amount": 150000 }
+  ]
+}
