@@ -16,6 +16,7 @@ import type {
   ApplicationListItem,
   ApplicationDetail,
   Applicant,
+  SessionDetail,
   WaitResponse,
   WaitingOfficer,
   WaitingRoom,
@@ -246,4 +247,20 @@ export const api = {
     request<Applicant>(`/api/assessment/applications/${id}/applicants`, { method: "POST", body: JSON.stringify(body) }),
   uploadApplicantInput: (id: string, body: { kind: string; provider?: string; fileName?: string; document: unknown }) =>
     request<Applicant>(`/api/assessment/applicants/${id}/inputs`, { method: "POST", body: JSON.stringify(body) }),
+  ensureSession: (body: {
+    applicationId?: string;
+    meetingId?: string;
+    bank?: string;
+    branch?: string;
+    groupId?: string;
+    memberId?: string;
+  }) => request<SessionDetail>("/api/assessment/sessions/ensure", { method: "POST", body: JSON.stringify(body) }),
+  session: (id: string) => request<SessionDetail>(`/api/assessment/sessions/${id}`),
+  saveSessionTask: (
+    id: string,
+    number: number,
+    body: { status?: string; choices?: string[]; notes?: string },
+  ) => request<SessionDetail>(`/api/assessment/sessions/${id}/tasks/${number}`, { method: "PUT", body: JSON.stringify(body) }),
+  completeSession: (id: string) =>
+    request<SessionDetail>(`/api/assessment/sessions/${id}/complete`, { method: "POST" }),
 };

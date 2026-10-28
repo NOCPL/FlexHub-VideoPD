@@ -162,3 +162,52 @@ public class RuleRunResult
     public string EvidenceJson { get; set; } = "[]";
     public int? FeedsTaskNumber { get; set; }
 }
+
+public static class SessionStatuses
+{
+    public const string InProgress = "InProgress";
+    public const string Completed = "Completed";
+}
+
+public static class SessionModes
+{
+    public const string Live = "Live";
+    public const string Review = "Review";
+}
+
+public static class TaskCoverage
+{
+    public const string Pending = "Pending";
+    public const string Covered = "Covered";
+    public const string NotCovered = "NotCovered";
+    public const string NotApplicable = "NotApplicable";
+}
+
+public class EngagementSession
+{
+    public Guid Id { get; set; }
+    public Guid ApplicationId { get; set; }
+    public AssessmentApplication? Application { get; set; }
+    public Guid? MeetingId { get; set; }
+    public Guid GuideId { get; set; }
+    public EngagementGuide? Guide { get; set; }
+    public int GuideVersion { get; set; }
+    public string Mode { get; set; } = SessionModes.Live;
+    public string Status { get; set; } = SessionStatuses.InProgress;
+    public Guid CreatedByUserId { get; set; }
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    public ICollection<SessionTaskAnswer> Answers { get; set; } = new List<SessionTaskAnswer>();
+}
+
+public class SessionTaskAnswer
+{
+    public Guid Id { get; set; }
+    public Guid SessionId { get; set; }
+    public EngagementSession? Session { get; set; }
+    public int TaskNumber { get; set; }
+    public string Status { get; set; } = TaskCoverage.Pending;
+    public string ChoicesJson { get; set; } = "[]";
+    public string Notes { get; set; } = "";
+    public DateTimeOffset UpdatedAt { get; set; }
+}

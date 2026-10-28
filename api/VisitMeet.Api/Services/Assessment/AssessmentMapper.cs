@@ -118,9 +118,10 @@ public static class AssessmentMapper
             LatestFiredFlagCount(app),
             app.CreatedAt);
 
-    public static ApplicationDetailDto ToDetail(AssessmentApplication app) =>
+    public static ApplicationDetailDto ToDetail(AssessmentApplication app, IReadOnlyList<SessionListItemDto>? sessions = null) =>
         new(
             app.Id, app.Code, app.DisplayName, app.LoanCategoryId, app.LoanCategory?.Name ?? "",
             app.Bank, app.Branch, app.GroupId, app.MemberId, app.LoanAmount, app.CreatedAt,
-            app.Applicants.OrderBy(a => a.Role == ApplicantRoles.Primary ? 0 : 1).ThenBy(a => a.Name).Select(ToDto).ToList());
+            app.Applicants.OrderBy(a => a.Role == ApplicantRoles.Primary ? 0 : 1).ThenBy(a => a.Name).Select(ToDto).ToList(),
+            sessions ?? []);
 }

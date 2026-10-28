@@ -67,6 +67,37 @@ export default function ApplicationDetailPage() {
                 {app.code} · {app.loanCategoryName} · ₹{app.loanAmount?.toLocaleString("en-IN") ?? "—"} · {app.bank} · {app.groupId || "—"} · {app.memberId || "—"}
               </p>
             </div>
+            <Card className="border border-[#d7deea] bg-white">
+              <CardHeader>
+                <CardTitle className="text-[#10264e]">Engagement sessions</CardTitle>
+                <CardDescription>Plan answers, probes and photos live on the host call and stay here for review.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {(app.sessions ?? []).length === 0 ? (
+                  <p className="text-sm text-[#5a6a84]">No session yet. Open one here or from the host Plan tab.</p>
+                ) : (
+                  (app.sessions ?? []).map((item) => (
+                    <Link key={item.id} href={`/assessment/sessions/${item.id}`} className="flex items-center justify-between rounded-lg border border-[#d7deea] px-3 py-2 hover:border-[#005792]">
+                      <span className="text-sm text-[#10264e]">{item.guideName} v{item.guideVersion} · {item.mode}</span>
+                      <Badge>{item.coveredCount}/{item.visibleCount} · {item.status}</Badge>
+                    </Link>
+                  ))
+                )}
+                <Button
+                  className="bg-[#005792] hover:bg-[#004675]"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    api.ensureSession({ applicationId: app.id })
+                      .then((created) => router.push(`/assessment/sessions/${created.id}`))
+                      .catch((err) => toast.error(err instanceof Error ? err.message : "Could not open a session."))
+                      .finally(() => setBusy(false));
+                  }}
+                >
+                  Open live / review session
+                </Button>
+              </CardContent>
+            </Card>
             {app.applicants.map((person) => (
               <ApplicantCard key={person.id} person={person} onUploaded={async () => setApp(await api.application(app.id))} />
             ))}

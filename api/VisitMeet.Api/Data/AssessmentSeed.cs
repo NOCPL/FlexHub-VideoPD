@@ -303,6 +303,21 @@ public static class AssessmentSeed
         var rules = db.DeviationRules.Local.ToList();
         SeedRun(db, applicant, adminId, now, InputKinds.Bureau, "equifax", "equifax-meena.json", SampleBureauJson, engine, rules, applicant);
         SeedRun(db, applicant, adminId, now.AddMinutes(1), InputKinds.BankStatement, "account-aggregator", "aa-meena.json", SampleBankJson, engine, rules, applicant, 900000);
+
+        var meeting = db.Meetings.Local.FirstOrDefault(m => m.Code == "VK7M2Q")
+                      ?? db.Meetings.FirstOrDefault(m => m.Code == "VK7M2Q");
+        db.EngagementSessions.Add(new EngagementSession
+        {
+            Id = Guid.Parse("51111111-1111-1111-1111-111111111111"),
+            ApplicationId = app.Id,
+            MeetingId = meeting?.Id,
+            GuideId = Guid.Parse("e1111111-1111-1111-1111-111111111111"),
+            GuideVersion = 1,
+            Mode = SessionModes.Live,
+            Status = SessionStatuses.InProgress,
+            CreatedByUserId = adminId,
+            StartedAt = now
+        });
     }
 
     private static void SeedRun(

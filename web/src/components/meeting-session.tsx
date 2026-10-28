@@ -53,6 +53,7 @@ type Props = {
   fieldOfficer?: WaitingOfficer | null;
   gpsLabel?: string | null;
   onLeave: (reason?: "ended" | "self") => void;
+  onSnapshotSaved?: () => void;
 };
 
 export function MeetingSession(props: Props) {
@@ -73,7 +74,7 @@ export function MeetingSession(props: Props) {
   );
 }
 
-function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) {
+function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave, onSnapshotSaved }: Props) {
   const room = useRoomContext();
   const participants = useParticipants();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
@@ -149,7 +150,7 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
 
   function capture(category: string) {
     if (!category) {
-      toast.error("Select House Image or KYC before capturing.");
+      toast.error("Select an image type before capturing.");
       return;
     }
     setSnapshotCategory(category);
@@ -382,7 +383,10 @@ function MeetingBody({ meeting, user, fieldOfficer, gpsLabel, onLeave }: Props) 
         category={snapshotCategory}
         onCategoryChange={setSnapshotCategory}
         onClose={() => setCaptureSrc(null)}
-        onSaved={() => toast.success(`${snapshotCategory} saved as group, member, and category.`)}
+        onSaved={() => {
+          toast.success(`${snapshotCategory} saved as group, member, and category.`);
+          onSnapshotSaved?.();
+        }}
       />
     </div>
   );

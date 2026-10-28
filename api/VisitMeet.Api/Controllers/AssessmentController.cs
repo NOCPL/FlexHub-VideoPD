@@ -12,7 +12,7 @@ namespace VisitMeet.Api.Controllers;
 [ApiController]
 [Route("api/assessment")]
 [Authorize(Roles = $"{Roles.Admin},{Roles.CreditOfficer}")]
-public class AssessmentController(AppDbContext db, AssessmentService assessment) : ControllerBase
+public class AssessmentController(AppDbContext db, AssessmentService assessment, SessionService sessions) : ControllerBase
 {
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<LoanCategoryDto>>> Categories() =>
@@ -177,11 +177,78 @@ public class AssessmentController(AppDbContext db, AssessmentService assessment)
     {
         try
         {
-            return AssessmentMapper.ToDetail(await assessment.LoadApplicationAsync(id));
+            var app = await assessment.LoadApplicationAsync(id);
+            var list = (await sessions.ListForApplicationAsync(id)).Select(sessions.ToListItem).ToList();
+            return AssessmentMapper.ToDetail(app, list);
         }
         catch (KeyNotFoundException)
         {
             return NotFound();
+        }
+    }
+
+    [HttpPost("sessions/ensure")]
+    public async Task<ActionResult<SessionDetailDto>> EnsureSession(EnsureSessionRequest request)
+    {
+        try
+        {
+            var session = await sessions.EnsureAsync(request, User.GetUserId());
+            return await sessions.ToDetailAsync(session);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("sessions/{id:guid}")]
+    public async Task<ActionResult<SessionDetailDto>> Session(Guid id)
+    {
+        try
+        {
+            return await sessions.ToDetailAsync(await sessions.LoadAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPut("sessions/{id:guid}/tasks/{number:int}")]
+    public async Task<ActionResult<SessionDetailDto>> SaveTask(Guid id, int number, SaveTaskAnswerRequest request)
+    {
+        try
+        {
+            return await sessions.ToDetailAsync(await sessions.SaveAnswerAsync(id, number, request));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("sessions/{id:guid}/complete")]
+    public async Task<ActionResult<SessionDetailDto>> CompleteSession(Guid id)
+    {
+        try
+        {
+            return await sessions.ToDetailAsync(await sessions.CompleteAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 

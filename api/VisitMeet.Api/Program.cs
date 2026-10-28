@@ -50,6 +50,7 @@ builder.Services.AddScoped<LobbyService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddSingleton<VisitMeet.Api.Services.Assessment.DeviationRuleEngine>();
 builder.Services.AddScoped<VisitMeet.Api.Services.Assessment.AssessmentService>();
+builder.Services.AddScoped<VisitMeet.Api.Services.Assessment.SessionService>();
 builder.Services.AddSignalR();
 builder.Services.AddRateLimiter(options =>
 {

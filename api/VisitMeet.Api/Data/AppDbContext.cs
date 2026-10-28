@@ -22,6 +22,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ApplicantInput> ApplicantInputs => Set<ApplicantInput>();
     public DbSet<RuleRun> RuleRuns => Set<RuleRun>();
     public DbSet<RuleRunResult> RuleRunResults => Set<RuleRunResult>();
+    public DbSet<EngagementSession> EngagementSessions => Set<EngagementSession>();
+    public DbSet<SessionTaskAnswer> SessionTaskAnswers => Set<SessionTaskAnswer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -138,6 +140,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.Property(x => x.Kind).HasMaxLength(32);
             e.HasMany(x => x.Results).WithOne(x => x.RuleRun).HasForeignKey(x => x.RuleRunId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EngagementSession>(e =>
+        {
+            e.Property(x => x.Mode).HasMaxLength(24);
+            e.Property(x => x.Status).HasMaxLength(24);
+            e.HasOne(x => x.Application).WithMany().HasForeignKey(x => x.ApplicationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Guide).WithMany().HasForeignKey(x => x.GuideId).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Answers).WithOne(x => x.Session).HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SessionTaskAnswer>(e =>
+        {
+            e.HasIndex(x => new { x.SessionId, x.TaskNumber }).IsUnique();
+            e.Property(x => x.Status).HasMaxLength(24);
         });
     }
 }

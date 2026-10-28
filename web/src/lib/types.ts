@@ -310,4 +310,82 @@ export type ApplicationDetail = {
   loanAmount: number | null;
   createdAt: string;
   applicants: Applicant[];
+  sessions: SessionListItem[];
+};
+
+export type SessionListItem = {
+  id: string;
+  status: string;
+  mode: string;
+  guideName: string;
+  guideVersion: number;
+  coveredCount: number;
+  visibleCount: number;
+  meetingCode: string | null;
+  startedAt: string;
+  completedAt: string | null;
+};
+
+export type SessionProbe = {
+  flagId: string;
+  checkKey: string;
+  name: string;
+  severity: string;
+  evidence: { kind?: string; summary?: string; fields?: Record<string, string | null> }[];
+  needsExplanation: boolean;
+};
+
+export type SessionTaskView = {
+  number: number;
+  title: string;
+  description: string;
+  groupName: string;
+  choices: string[];
+  allowMultiple: boolean;
+  conditionTaskNumber: number | null;
+  conditionChoices: string[];
+  ruleLink: string | null;
+  coverage: string;
+  selectedChoices: string[];
+  notes: string;
+  probes: SessionProbe[];
+};
+
+export type SessionGroupView = {
+  name: string;
+  sortOrder: number;
+  coveredCount: number;
+  visibleCount: number;
+  tasks: SessionTaskView[];
+};
+
+export type SessionDetail = {
+  id: string;
+  status: string;
+  mode: string;
+  eventType: string;
+  guideVersion: number;
+  guideName: string;
+  applicationId: string;
+  applicationCode: string;
+  displayName: string;
+  loanCategoryName: string;
+  loanAmount: number | null;
+  meetingId: string | null;
+  meetingCode: string | null;
+  bank: string;
+  branch: string;
+  groupId: string;
+  memberId: string;
+  startedAt: string;
+  completedAt: string | null;
+  scheduledAt: string | null;
+  assigneeName: string | null;
+  durationSeconds: number | null;
+  blockers: string[];
+  coveredCount: number;
+  visibleCount: number;
+  groups: SessionGroupView[];
+  photos: Snapshot[];
+  recordings: Recording[];
 };

@@ -5,6 +5,12 @@ export const SNAPSHOT_CATEGORIES = [
   "KYC 1",
   "KYC 2",
   "KYC 3",
+  "Business site",
+  "Dairy",
+  "Kirana",
+  "Tailoring",
+  "Barber",
+  "Clothing store",
 ] as const;
 
 export type SnapshotCategory = (typeof SNAPSHOT_CATEGORIES)[number];
