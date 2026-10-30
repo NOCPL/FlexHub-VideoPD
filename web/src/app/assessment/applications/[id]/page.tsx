@@ -14,13 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import type { Applicant, ApplicationDetail, RuleFlag } from "@/lib/types";
+import type { Applicant, ApplicationDetail, MemoListItem, RuleFlag } from "@/lib/types";
 
 export default function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading } = useAuth();
   const router = useRouter();
   const [app, setApp] = useState<ApplicationDetail | null>(null);
+  const [memos, setMemos] = useState<MemoListItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [co, setCo] = useState({ name: "", pan: "", phone: "", dateOfBirth: "" });
   const [busy, setBusy] = useState(false);
@@ -32,6 +33,7 @@ export default function ApplicationDetailPage() {
   useEffect(() => {
     if (!user || !id) return;
     api.application(id).then(setApp).catch((err) => setError(err.message));
+    api.memos(id).then(setMemos).catch(() => setMemos([]));
   }, [user, id]);
 
   async function addCo(e: FormEvent) {
@@ -95,6 +97,35 @@ export default function ApplicationDetailPage() {
                   }}
                 >
                   Open live / review session
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="border border-[#d7deea] bg-white">
+              <CardHeader>
+                <CardTitle className="text-[#10264e]">Credit Assessment Memo</CardTitle>
+                <CardDescription>View and download only after extraction. A re-run keeps values saved by the credit officer.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {memos.length === 0 ? (
+                  <p className="text-sm text-[#5a6a84]">No memo yet.</p>
+                ) : memos.map((item) => (
+                  <Link key={item.id} href={`/assessment/memos/${item.id}`} className="flex items-center justify-between rounded-lg border border-[#d7deea] px-3 py-2 hover:border-[#005792]">
+                    <span className="text-sm text-[#10264e]">{item.templateName} v{item.templateVersion}</span>
+                    <Badge>{item.status}{item.status === "Processed" ? ` · ${item.filledCount} filled` : ""}</Badge>
+                  </Link>
+                ))}
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setBusy(true);
+                    api.createMemo(app.id, app.sessions[0]?.id)
+                      .then((created) => router.push(`/assessment/memos/${created.id}`))
+                      .catch((err) => toast.error(err instanceof Error ? err.message : "Could not open the memo."))
+                      .finally(() => setBusy(false));
+                  }}
+                >
+                  Open CAM
                 </Button>
               </CardContent>
             </Card>

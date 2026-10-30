@@ -236,6 +236,132 @@ public record SessionGroupViewDto(
     int VisibleCount,
     IReadOnlyList<SessionTaskViewDto> Tasks);
 
+public record TemplateListItemDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string MemoType,
+    int Version,
+    string Status,
+    IReadOnlyList<Guid> LoanCategoryIds,
+    IReadOnlyList<string> FileCategories,
+    int SectionCount,
+    int FieldCount,
+    DateTimeOffset UpdatedAt);
+
+public record TemplateSectionDto(Guid Id, string Name, string Source, int SortOrder, int FieldCount);
+
+public record TemplateFieldDto(
+    Guid Id,
+    Guid SectionId,
+    int Number,
+    string Label,
+    string Question,
+    string Datatype,
+    IReadOnlyList<string> Options,
+    bool AllowMultiple,
+    int? ConditionFieldNumber,
+    IReadOnlyList<string> ConditionChoices,
+    string Source,
+    string? PhotoType,
+    int? TaskNumber,
+    string? RuleLink,
+    string? JsonShape,
+    int SortOrder);
+
+public record TemplateDetailDto(
+    Guid Id,
+    string Code,
+    string Name,
+    string MemoType,
+    int Version,
+    string Status,
+    IReadOnlyList<Guid> LoanCategoryIds,
+    IReadOnlyList<string> FileCategories,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    IReadOnlyList<TemplateSectionDto> Sections,
+    IReadOnlyList<TemplateFieldDto> Fields);
+
+public record UpsertTemplateRequest(
+    string Name,
+    string? MemoType,
+    string? Status,
+    IReadOnlyList<Guid>? LoanCategoryIds,
+    IReadOnlyList<string>? FileCategories);
+
+public record CloneTemplateRequest(string Name, IReadOnlyList<Guid>? LoanCategoryIds);
+
+public record UpdateTemplateFieldRequest(
+    string Label,
+    string Question,
+    string? Datatype,
+    IReadOnlyList<string>? Options,
+    bool? AllowMultiple,
+    int? ConditionFieldNumber,
+    IReadOnlyList<string>? ConditionChoices,
+    string? Source,
+    string? PhotoType);
+
+public record CreateMemoRequest(Guid? SessionId);
+
+public record SaveMemoFieldRequest(string Value);
+
+public record MemoListItemDto(
+    Guid Id,
+    Guid ApplicationId,
+    Guid? SessionId,
+    string TemplateName,
+    int TemplateVersion,
+    string Status,
+    string TranscriptStatus,
+    int FilledCount,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ProcessedAt);
+
+public record MemoFieldDto(
+    int Number,
+    string Label,
+    string Question,
+    string Datatype,
+    IReadOnlyList<string> Options,
+    bool AllowMultiple,
+    int? ConditionFieldNumber,
+    IReadOnlyList<string> ConditionChoices,
+    string Source,
+    string? PhotoType,
+    string? JsonShape,
+    bool Applicable,
+    string? Value,
+    string? Stage,
+    string? SourceKind,
+    string? SourceRef,
+    string? SourceLabel);
+
+public record MemoSectionDto(
+    string Name,
+    string Source,
+    int SortOrder,
+    IReadOnlyList<MemoFieldDto> Fields);
+
+public record MemoDetailDto(
+    Guid Id,
+    Guid ApplicationId,
+    string ApplicationCode,
+    string DisplayName,
+    Guid? SessionId,
+    Guid TemplateId,
+    string TemplateName,
+    int TemplateVersion,
+    string Status,
+    string TranscriptStatus,
+    string? TranscriptNote,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? ProcessedAt,
+    int FieldCount,
+    int FilledCount,
+    IReadOnlyList<MemoSectionDto> Sections);
+
 public record SessionDetailDto(
     Guid Id,
     string Status,

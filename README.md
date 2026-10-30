@@ -151,14 +151,18 @@ Admin configuration, JSON-driven flags, and the Plan panel on the host call.
 | `/assessment/guides` | Admin | Engagement guides: edit, reorder, clone/version |
 | `/assessment/rules` | Admin | 12 Conatus deviation rules — thresholds, severity, on/off |
 | `/assessment/categories` | Admin | Loan categories (Business LAP, JLG, …) |
+| `/assessment/templates` | Admin | CAM output templates: 103 fields, clone/version |
 | `/host/{slug}` Plan / Photos / Metadata | Credit officer, admin | Guided session on the Video PD call |
 | `/assessment/sessions/{id}` | Credit officer, admin | Review the same session after the call |
+| `/assessment/memos/{id}` | Credit officer, admin | CAM. View and download after extraction |
 
 Seeded: Business LAP guide (100 tasks / 16 groups, including multi-select income sources on task 029 and conditional groups), 12 rules, application `CAM31` (Meena Devi) with bureau + bank JSON already run, and a live session linked to visit `VK7M2Q` (G-22 / M-10482).
 
 A group's `x/y Complete` counts only tasks whose condition is met (Residence rent stays hidden until ownership is Rented; Income: Salary appears when 029 includes Salaried). Bureau and Banking tasks show fired flags as probes. High flags need a written explanation, and Introduction (consent Yes) is required before **Mark session completed**.
 
-Sample files: `samples/assessment/equifax-meena.json` and `samples/assessment/aa-meena.json`. Transcription and CAM remain a later slice. Object-lock hash chain for recordings is not in this slice.
+Sample files: `samples/assessment/equifax-meena.json` and `samples/assessment/aa-meena.json`.
+
+The Business LAP CAM template (version 2, 103 fields, 14 sections) is seeded, with a pending memo on application `CAM31`. Run extraction on that memo to fill bureau flags, covered session answers, and captured house or business-site photos. Each value keeps a source pointer. A value saved by the credit officer stays in place when extraction runs again. Transcript questions, and photo observations that need someone to read the picture, stay empty until a call transcript is stored. Object-lock hash chain for recordings is not in this slice.
 
 ## Layout
 

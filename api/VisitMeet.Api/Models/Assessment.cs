@@ -211,3 +211,129 @@ public class SessionTaskAnswer
     public string Notes { get; set; } = "";
     public DateTimeOffset UpdatedAt { get; set; }
 }
+
+public static class TemplateStatuses
+{
+    public const string Draft = "Draft";
+    public const string Active = "Active";
+    public const string Archived = "Archived";
+}
+
+public static class FieldDatatypes
+{
+    public const string String = "String";
+    public const string Number = "Number";
+    public const string Json = "Json";
+    public const string Options = "Options";
+}
+
+public static class FieldSources
+{
+    public const string Transcript = "Transcript";
+    public const string Photos = "Photos";
+    public const string Documents = "Documents";
+}
+
+public static class MemoStatuses
+{
+    public const string Pending = "Pending";
+    public const string Processed = "Processed";
+}
+
+public static class MemoStages
+{
+    public const string Extraction = "extraction";
+    public const string Manual = "manual";
+}
+
+public static class MemoValueSources
+{
+    public const string SessionTask = "SessionTask";
+    public const string RuleEvidence = "RuleEvidence";
+    public const string Photo = "Photo";
+    public const string Transcript = "Transcript";
+    public const string Manual = "Manual";
+}
+
+public class OutputTemplate
+{
+    public Guid Id { get; set; }
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public string MemoType { get; set; } = "Credit Assessment Memo";
+    public int Version { get; set; } = 1;
+    public string Status { get; set; } = TemplateStatuses.Draft;
+    public string LoanCategoryIdsJson { get; set; } = "[]";
+    public string FileCategoriesJson { get; set; } = "[]";
+    public Guid CreatedByUserId { get; set; }
+    public Guid? UpdatedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public ICollection<OutputSection> Sections { get; set; } = new List<OutputSection>();
+    public ICollection<OutputField> Fields { get; set; } = new List<OutputField>();
+}
+
+public class OutputSection
+{
+    public Guid Id { get; set; }
+    public Guid TemplateId { get; set; }
+    public OutputTemplate? Template { get; set; }
+    public string Name { get; set; } = "";
+    public string Source { get; set; } = FieldSources.Transcript;
+    public int SortOrder { get; set; }
+}
+
+public class OutputField
+{
+    public Guid Id { get; set; }
+    public Guid TemplateId { get; set; }
+    public OutputTemplate? Template { get; set; }
+    public Guid SectionId { get; set; }
+    public OutputSection? Section { get; set; }
+    public int Number { get; set; }
+    public string Label { get; set; } = "";
+    public string Question { get; set; } = "";
+    public string Datatype { get; set; } = FieldDatatypes.String;
+    public string OptionsJson { get; set; } = "[]";
+    public bool AllowMultiple { get; set; }
+    public int? ConditionFieldNumber { get; set; }
+    public string ConditionChoicesJson { get; set; } = "[]";
+    public string Source { get; set; } = FieldSources.Transcript;
+    public string? PhotoType { get; set; }
+    public int? TaskNumber { get; set; }
+    public string? RuleLink { get; set; }
+    public string? JsonShape { get; set; }
+    public int SortOrder { get; set; }
+}
+
+public class AssessmentMemo
+{
+    public Guid Id { get; set; }
+    public Guid ApplicationId { get; set; }
+    public AssessmentApplication? Application { get; set; }
+    public Guid? SessionId { get; set; }
+    public EngagementSession? Session { get; set; }
+    public Guid TemplateId { get; set; }
+    public OutputTemplate? Template { get; set; }
+    public int TemplateVersion { get; set; }
+    public string Status { get; set; } = MemoStatuses.Pending;
+    public string TranscriptStatus { get; set; } = "Missing";
+    public Guid CreatedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ProcessedAt { get; set; }
+    public ICollection<MemoFieldValue> Values { get; set; } = new List<MemoFieldValue>();
+}
+
+public class MemoFieldValue
+{
+    public Guid Id { get; set; }
+    public Guid MemoId { get; set; }
+    public AssessmentMemo? Memo { get; set; }
+    public int FieldNumber { get; set; }
+    public string Value { get; set; } = "";
+    public string Stage { get; set; } = MemoStages.Extraction;
+    public string SourceKind { get; set; } = "";
+    public string SourceRef { get; set; } = "";
+    public string SourceLabel { get; set; } = "";
+    public DateTimeOffset UpdatedAt { get; set; }
+}

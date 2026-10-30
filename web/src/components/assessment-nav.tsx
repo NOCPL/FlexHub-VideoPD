@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/assessment/guides", label: "Guides", match: (path: string) => path.startsWith("/assessment/guides") },
   { href: "/assessment/rules", label: "Deviation rules", match: (path: string) => path.startsWith("/assessment/rules") },
   { href: "/assessment/categories", label: "Loan categories", match: (path: string) => path.startsWith("/assessment/categories") },
+  { href: "/assessment/templates", label: "CAM templates", match: (path: string) => path.startsWith("/assessment/templates") },
 ];
 
 export function AssessmentNav() {

@@ -124,4 +124,25 @@ public static class AssessmentMapper
             app.Bank, app.Branch, app.GroupId, app.MemberId, app.LoanAmount, app.CreatedAt,
             app.Applicants.OrderBy(a => a.Role == ApplicantRoles.Primary ? 0 : 1).ThenBy(a => a.Name).Select(ToDto).ToList(),
             sessions ?? []);
+
+    public static TemplateListItemDto ToListItem(OutputTemplate template) =>
+        new(
+            template.Id, template.Code, template.Name, template.MemoType, template.Version, template.Status,
+            Guids(template.LoanCategoryIdsJson), Strings(template.FileCategoriesJson),
+            template.Sections.Count, template.Fields.Count, template.UpdatedAt);
+
+    public static TemplateDetailDto ToDetail(OutputTemplate template)
+    {
+        var sections = template.Sections.OrderBy(s => s.SortOrder).Select(s =>
+            new TemplateSectionDto(s.Id, s.Name, s.Source, s.SortOrder, template.Fields.Count(f => f.SectionId == s.Id))).ToList();
+        var fields = template.Fields.OrderBy(f => f.Number).Select(f =>
+            new TemplateFieldDto(
+                f.Id, f.SectionId, f.Number, f.Label, f.Question, f.Datatype, Strings(f.OptionsJson), f.AllowMultiple,
+                f.ConditionFieldNumber, Strings(f.ConditionChoicesJson), f.Source, f.PhotoType, f.TaskNumber, f.RuleLink,
+                f.JsonShape, f.SortOrder)).ToList();
+        return new TemplateDetailDto(
+            template.Id, template.Code, template.Name, template.MemoType, template.Version, template.Status,
+            Guids(template.LoanCategoryIdsJson), Strings(template.FileCategoriesJson),
+            template.CreatedAt, template.UpdatedAt, sections, fields);
+    }
 }

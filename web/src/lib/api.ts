@@ -17,6 +17,10 @@ import type {
   ApplicationDetail,
   Applicant,
   SessionDetail,
+  TemplateListItem,
+  TemplateDetail,
+  MemoListItem,
+  MemoDetail,
   WaitResponse,
   WaitingOfficer,
   WaitingRoom,
@@ -263,4 +267,64 @@ export const api = {
   ) => request<SessionDetail>(`/api/assessment/sessions/${id}/tasks/${number}`, { method: "PUT", body: JSON.stringify(body) }),
   completeSession: (id: string) =>
     request<SessionDetail>(`/api/assessment/sessions/${id}/complete`, { method: "POST" }),
+  templates: () => request<TemplateListItem[]>("/api/assessment/templates"),
+  template: (id: string) => request<TemplateDetail>(`/api/assessment/templates/${id}`),
+  updateTemplate: (
+    id: string,
+    body: { name: string; memoType?: string; status?: string; loanCategoryIds?: string[]; fileCategories?: string[] },
+  ) => request<TemplateDetail>(`/api/assessment/templates/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  cloneTemplate: (id: string, body: { name: string; loanCategoryIds?: string[] }) =>
+    request<TemplateDetail>(`/api/assessment/templates/${id}/clone`, { method: "POST", body: JSON.stringify(body) }),
+  updateTemplateField: (
+    id: string,
+    number: number,
+    body: {
+      label: string;
+      question: string;
+      datatype?: string;
+      options?: string[];
+      allowMultiple?: boolean;
+      conditionFieldNumber?: number | null;
+      conditionChoices?: string[];
+      source?: string;
+      photoType?: string | null;
+    },
+  ) => request<TemplateDetail>(`/api/assessment/templates/${id}/fields/${number}`, { method: "PUT", body: JSON.stringify(body) }),
+  memos: (applicationId: string) => request<MemoListItem[]>(`/api/assessment/applications/${applicationId}/memos`),
+  createMemo: (applicationId: string, sessionId?: string | null) =>
+    request<MemoDetail>(`/api/assessment/applications/${applicationId}/memos`, {
+      method: "POST",
+      body: JSON.stringify({ sessionId: sessionId ?? null }),
+    }),
+  memo: (id: string) => request<MemoDetail>(`/api/assessment/memos/${id}`),
+  processMemo: (id: string) => request<MemoDetail>(`/api/assessment/memos/${id}/process`, { method: "POST" }),
+  saveMemoField: (id: string, number: number, value: string) =>
+    request<MemoDetail>(`/api/assessment/memos/${id}/fields/${number}`, {
+      method: "PUT",
+      body: JSON.stringify({ value }),
+    }),
+  downloadMemo: async (id: string, fileName: string) => {
+    const token = getToken();
+    const headers = new Headers();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    const res = await fetch(`${API_URL}/api/assessment/memos/${id}/download`, { headers });
+    const text = await res.text();
+    if (!res.ok) {
+      let message = `Request failed (${res.status})`;
+      try {
+        const data = text ? JSON.parse(text) : null;
+        if (data?.message) message = data.message;
+      } catch {
+        // The body was not JSON.
+      }
+      throw new ApiError(res.status, message);
+    }
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
 };

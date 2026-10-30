@@ -24,6 +24,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RuleRunResult> RuleRunResults => Set<RuleRunResult>();
     public DbSet<EngagementSession> EngagementSessions => Set<EngagementSession>();
     public DbSet<SessionTaskAnswer> SessionTaskAnswers => Set<SessionTaskAnswer>();
+    public DbSet<OutputTemplate> OutputTemplates => Set<OutputTemplate>();
+    public DbSet<OutputSection> OutputSections => Set<OutputSection>();
+    public DbSet<OutputField> OutputFields => Set<OutputField>();
+    public DbSet<AssessmentMemo> AssessmentMemos => Set<AssessmentMemo>();
+    public DbSet<MemoFieldValue> MemoFieldValues => Set<MemoFieldValue>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -155,6 +160,51 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(x => new { x.SessionId, x.TaskNumber }).IsUnique();
             e.Property(x => x.Status).HasMaxLength(24);
+        });
+
+        modelBuilder.Entity<OutputTemplate>(e =>
+        {
+            e.HasIndex(x => new { x.Code, x.Version }).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(64);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.MemoType).HasMaxLength(80);
+            e.Property(x => x.Status).HasMaxLength(24);
+            e.HasMany(x => x.Sections).WithOne(x => x.Template).HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Fields).WithOne(x => x.Template).HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OutputSection>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(120);
+            e.Property(x => x.Source).HasMaxLength(24);
+        });
+
+        modelBuilder.Entity<OutputField>(e =>
+        {
+            e.HasIndex(x => new { x.TemplateId, x.Number }).IsUnique();
+            e.HasIndex(x => new { x.TemplateId, x.Label }).IsUnique();
+            e.Property(x => x.Label).HasMaxLength(80);
+            e.Property(x => x.Datatype).HasMaxLength(24);
+            e.Property(x => x.Source).HasMaxLength(24);
+            e.Property(x => x.PhotoType).HasMaxLength(40);
+            e.HasOne(x => x.Section).WithMany().HasForeignKey(x => x.SectionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AssessmentMemo>(e =>
+        {
+            e.Property(x => x.Status).HasMaxLength(24);
+            e.Property(x => x.TranscriptStatus).HasMaxLength(24);
+            e.HasOne(x => x.Application).WithMany().HasForeignKey(x => x.ApplicationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Session).WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.Template).WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Values).WithOne(x => x.Memo).HasForeignKey(x => x.MemoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MemoFieldValue>(e =>
+        {
+            e.HasIndex(x => new { x.MemoId, x.FieldNumber }).IsUnique();
+            e.Property(x => x.Stage).HasMaxLength(24);
+            e.Property(x => x.SourceKind).HasMaxLength(32);
         });
     }
 }

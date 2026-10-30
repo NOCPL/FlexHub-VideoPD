@@ -389,3 +389,109 @@ export type SessionDetail = {
   photos: Snapshot[];
   recordings: Recording[];
 };
+
+export type TemplateListItem = {
+  id: string;
+  code: string;
+  name: string;
+  memoType: string;
+  version: number;
+  status: string;
+  loanCategoryIds: string[];
+  fileCategories: string[];
+  sectionCount: number;
+  fieldCount: number;
+  updatedAt: string;
+};
+
+export type TemplateSection = {
+  id: string;
+  name: string;
+  source: string;
+  sortOrder: number;
+  fieldCount: number;
+};
+
+export type TemplateField = {
+  id: string;
+  sectionId: string;
+  number: number;
+  label: string;
+  question: string;
+  datatype: string;
+  options: string[];
+  allowMultiple: boolean;
+  conditionFieldNumber: number | null;
+  conditionChoices: string[];
+  source: string;
+  photoType: string | null;
+  taskNumber: number | null;
+  ruleLink: string | null;
+  jsonShape: string | null;
+  sortOrder: number;
+};
+
+export type TemplateDetail = TemplateListItem & {
+  createdAt: string;
+  sections: TemplateSection[];
+  fields: TemplateField[];
+};
+
+export type MemoListItem = {
+  id: string;
+  applicationId: string;
+  sessionId: string | null;
+  templateName: string;
+  templateVersion: number;
+  status: string;
+  transcriptStatus: string;
+  filledCount: number;
+  createdAt: string;
+  processedAt: string | null;
+};
+
+export type MemoField = {
+  number: number;
+  label: string;
+  question: string;
+  datatype: string;
+  options: string[];
+  allowMultiple: boolean;
+  conditionFieldNumber: number | null;
+  conditionChoices: string[];
+  source: string;
+  photoType: string | null;
+  jsonShape: string | null;
+  applicable: boolean;
+  value: string | null;
+  stage: string | null;
+  sourceKind: string | null;
+  sourceRef: string | null;
+  sourceLabel: string | null;
+};
+
+export type MemoSection = {
+  name: string;
+  source: string;
+  sortOrder: number;
+  fields: MemoField[];
+};
+
+export type MemoDetail = {
+  id: string;
+  applicationId: string;
+  applicationCode: string;
+  displayName: string;
+  sessionId: string | null;
+  templateId: string;
+  templateName: string;
+  templateVersion: number;
+  status: string;
+  transcriptStatus: string;
+  transcriptNote: string | null;
+  createdAt: string;
+  processedAt: string | null;
+  fieldCount: number;
+  filledCount: number;
+  sections: MemoSection[];
+};

@@ -12,7 +12,7 @@ namespace VisitMeet.Api.Controllers;
 [ApiController]
 [Route("api/assessment")]
 [Authorize(Roles = $"{Roles.Admin},{Roles.CreditOfficer}")]
-public class AssessmentController(AppDbContext db, AssessmentService assessment, SessionService sessions) : ControllerBase
+public class AssessmentController(AppDbContext db, AssessmentService assessment, SessionService sessions, MemoService memos) : ControllerBase
 {
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<LoanCategoryDto>>> Categories() =>
@@ -261,6 +261,166 @@ public class AssessmentController(AppDbContext db, AssessmentService assessment,
             var loaded = await assessment.LoadApplicationAsync(id);
             return Created($"/api/assessment/applicants/{applicant.Id}",
                 AssessmentMapper.ToDto(loaded.Applicants.First(a => a.Id == applicant.Id)));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("templates")]
+    public async Task<ActionResult<IReadOnlyList<TemplateListItemDto>>> Templates()
+    {
+        var templates = await memos.Templates.OrderBy(t => t.Code).ThenByDescending(t => t.Version).ToListAsync();
+        return templates.Select(AssessmentMapper.ToListItem).ToList();
+    }
+
+    [HttpGet("templates/{id:guid}")]
+    public async Task<ActionResult<TemplateDetailDto>> Template(Guid id)
+    {
+        try
+        {
+            return AssessmentMapper.ToDetail(await memos.LoadTemplateAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPut("templates/{id:guid}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<ActionResult<TemplateDetailDto>> UpdateTemplate(Guid id, UpsertTemplateRequest request)
+    {
+        try
+        {
+            return AssessmentMapper.ToDetail(await memos.UpdateTemplateAsync(id, request, User.GetUserId()));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost("templates/{id:guid}/clone")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<ActionResult<TemplateDetailDto>> CloneTemplate(Guid id, CloneTemplateRequest request)
+    {
+        try
+        {
+            var template = await memos.CloneAsync(id, request, User.GetUserId());
+            return Created($"/api/assessment/templates/{template.Id}", AssessmentMapper.ToDetail(template));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPut("templates/{id:guid}/fields/{number:int}")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<ActionResult<TemplateDetailDto>> UpdateTemplateField(Guid id, int number, UpdateTemplateFieldRequest request)
+    {
+        try
+        {
+            await memos.UpdateFieldAsync(id, number, request, User.GetUserId());
+            return AssessmentMapper.ToDetail(await memos.LoadTemplateAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("applications/{id:guid}/memos")]
+    public async Task<ActionResult<IReadOnlyList<MemoListItemDto>>> Memos(Guid id)
+    {
+        if (!await db.AssessmentApplications.AnyAsync(a => a.Id == id))
+            return NotFound();
+        var list = await memos.ListForApplicationAsync(id);
+        return list.Select(memos.ToListItem).ToList();
+    }
+
+    [HttpPost("applications/{id:guid}/memos")]
+    public async Task<ActionResult<MemoDetailDto>> CreateMemo(Guid id, CreateMemoRequest request)
+    {
+        try
+        {
+            var memo = await memos.EnsureAsync(id, request.SessionId, User.GetUserId());
+            return Created($"/api/assessment/memos/{memo.Id}", memos.ToDetail(await memos.LoadAsync(memo.Id)));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("memos/{id:guid}")]
+    public async Task<ActionResult<MemoDetailDto>> Memo(Guid id)
+    {
+        try
+        {
+            return memos.ToDetail(await memos.LoadAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
+    [HttpPost("memos/{id:guid}/process")]
+    public async Task<ActionResult<MemoDetailDto>> ProcessMemo(Guid id)
+    {
+        try
+        {
+            return memos.ToDetail(await memos.ProcessAsync(id));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPut("memos/{id:guid}/fields/{number:int}")]
+    public async Task<ActionResult<MemoDetailDto>> SaveMemoField(Guid id, int number, SaveMemoFieldRequest request)
+    {
+        try
+        {
+            return memos.ToDetail(await memos.SaveManualAsync(id, number, request.Value));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpGet("memos/{id:guid}/download")]
+    public async Task<IActionResult> DownloadMemo(Guid id)
+    {
+        try
+        {
+            var (name, body) = await memos.DownloadAsync(id);
+            return File(body, "application/json", name);
         }
         catch (KeyNotFoundException)
         {

@@ -36,6 +36,7 @@ public static class AssessmentSeed
         var categoryJson = AssessmentMapper.ToJson(new[] { lap.Id });
         SeedRules(db, adminId, categoryJson, now);
         SeedBusinessLapGuide(db, adminId, lap.Id, now);
+        CamTemplateSeed.Seed(db, adminId, lap.Id, now);
         SeedSampleApplication(db, adminId, lap.Id, now);
         await db.SaveChangesAsync();
     }
@@ -317,6 +318,18 @@ public static class AssessmentSeed
             Status = SessionStatuses.InProgress,
             CreatedByUserId = adminId,
             StartedAt = now
+        });
+        db.AssessmentMemos.Add(new AssessmentMemo
+        {
+            Id = Guid.Parse("61111111-1111-1111-1111-111111111111"),
+            ApplicationId = app.Id,
+            SessionId = Guid.Parse("51111111-1111-1111-1111-111111111111"),
+            TemplateId = CamTemplateCatalog.BusinessLapTemplateId,
+            TemplateVersion = 2,
+            Status = MemoStatuses.Pending,
+            TranscriptStatus = "Missing",
+            CreatedByUserId = adminId,
+            CreatedAt = now
         });
     }
 
